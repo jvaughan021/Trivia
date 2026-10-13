@@ -314,7 +314,7 @@
         async function fetchMatchQuestions(amount = 20, difficulty = 'medium', retries = 3) {
             const seenQuestions = getSeenQuestions();
             let uniqueQuestions = [];
-            const requestAmount = Math.min(amount + 10, 50);
+            const requestAmount = Math.min(amount + 15, 50);
 
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
@@ -328,7 +328,7 @@
                     if (!res.ok) throw new Error(`API Status ${res.status}`);
                     const data = await res.json();
 
-                    if (data.response_code === 0 && data.results) {
+                    if (data.response_code === 0 && data.results && data.results.length > 0) {
                         for (let item of data.results) {
                             const formattedQ = decodeHTML(item.question);
 
@@ -359,24 +359,33 @@
                 }
             }
 
-            while (uniqueQuestions.length < amount) {
-                const fallbackQ = generateProceduralQuestion(uniqueQuestions.length + 1);
-                uniqueQuestions.push(fallbackQ);
+            // Fallback retry with no difficulty constraint to force real OpenTDB questions
+            if (uniqueQuestions.length < amount) {
+                try {
+                    const fallbackRes = await fetch(`https://opentdb.com/api.php?amount=${amount - uniqueQuestions.length}&type=multiple`);
+                    const fallbackData = await fallbackRes.json();
+                    if (fallbackData.response_code === 0 && fallbackData.results) {
+                        for (let item of fallbackData.results) {
+                            const formattedQ = decodeHTML(item.question);
+                            const correct = decodeHTML(item.correct_answer);
+                            const incorrects = item.incorrect_answers.map(decodeHTML);
+                            const options = [...incorrects];
+                            const correctIndex = Math.floor(Math.random() * 4);
+                            options.splice(correctIndex, 0, correct);
+
+                            uniqueQuestions.push({
+                                q: formattedQ,
+                                options: options,
+                                correct: correctIndex
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("Secondary OpenTDB fetch error:", e);
+                }
             }
 
             return uniqueQuestions.slice(0, amount);
-        }
-
-        function generateProceduralQuestion(id) {
-            const a = Math.floor(Math.random() * 40) + 12;
-            const b = Math.floor(Math.random() * 40) + 12;
-            const ans = a + b;
-            const options = [ans, ans + 3, ans - 4, ans + 10].sort(() => Math.random() - 0.5);
-            return {
-                q: `Quick Math: What is ${a} + ${b}?`,
-                options: options.map(String),
-                correct: options.indexOf(ans)
-            };
         }
 
         function switchView(viewId) {
@@ -786,7 +795,6 @@
                 const btn = document.createElement('button');
                 
                 if (isHostSpectator) {
-                    // Highlight correct answer in green for spectator host
                     if (index === qData.correct) {
                         btn.className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
                         btn.innerHTML = `<span><span class="text-emerald-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span> <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-bold">CORRECT</span>`;
