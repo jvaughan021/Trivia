@@ -469,21 +469,33 @@
             listenToRoom(code);
         }
 
-        async function setRoomMode(mode) {
+        // --- OPTIMIZED INSTANT UI UPDATES ---
+        function setRoomMode(mode) {
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
-            await db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode });
+            
+            // Instantly refresh local UI buttons without waiting
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
+
+            // Sync to Firebase in the background
+            db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
         }
 
-        async function setQuestionCount(count) {
+        function setQuestionCount(count) {
             if (!isHost || !currentRoomCode) return;
             targetQuestionCount = count;
-            matchQuestions = await fetchMatchQuestions(count);
 
-            await db.collection('trivia_rooms').doc(currentRoomCode).update({
-                qCount: count,
-                questions: matchQuestions
-            });
+            // Instantly refresh local UI buttons immediately
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
+
+            // Fetch questions and sync to Firebase in the background asynchronously
+            fetchMatchQuestions(count).then(questions => {
+                matchQuestions = questions;
+                return db.collection('trivia_rooms').doc(currentRoomCode).update({
+                    qCount: count,
+                    questions: matchQuestions
+                });
+            }).catch(err => console.error("Question count sync error:", err));
         }
 
         async function joinRoom() {
@@ -604,7 +616,7 @@
         }
 
         function renderWaitingRoom(data) {
-            document.getElementById('display-room-code').innerText = data.code;
+            document.getElementById('display-room-code').innerText = data.code || currentRoomCode;
             if (isHost) {
                 document.getElementById('host-controls').classList.remove('hidden');
                 document.getElementById('host-mode-selection').classList.remove('hidden');
@@ -698,112 +710,145 @@
         function startTimer(seconds, qIndex) {
             if (timerInterval) clearInterval(timerInterval);
             currentQuestionTimeLeft = seconds;
-            const timerElem = document.getElementById('q-timer');
-            timerElem.innerText = `⏱️ ${currentQuestionTimeLeft.toFixed(1)}s`;
+            const timerEl = document.getElementById('q-timer');
+            timerEl.innerText = `⏱️ ${seconds.toFixed(1)}s`;
+
+            const startTime = Date.now();
+            const durationMs = seconds * 1000;
 
             timerInterval = setInterval(() => {
-                currentQuestionTimeLeft -= 0.1;
-                if (currentQuestionTimeLeft <= 0) {
-                    currentQuestionTimeLeft = 0;
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, (durationMs - elapsed) / 1000);
+                currentQuestionTimeLeft = remaining;
+                timerEl.innerText = `⏱️ ${remaining.toFixed(1)}s`;
+
+                if (remaining <= 0) {
                     clearInterval(timerInterval);
-                    timerElem.innerText = `⏱️ 0.0s`;
                     if (!hasAnswered && !isEliminated && qIndex !== null) {
-                        submitMultiplayerAnswer(-1, qIndex); // Time out counts as incorrect
+                        submitMultiplayerAnswer(-1, qIndex); // Time out
                     }
-                } else {
-                    timerElem.innerText = `⏱️ ${currentQuestionTimeLeft.toFixed(1)}s`;
                 }
             }, 100);
         }
 
-        async function submitMultiplayerAnswer(selectedIndex, qIndex) {
+        async function submitMultiplayerAnswer(optionIndex, qIndex) {
             if (hasAnswered || isEliminated) return;
             hasAnswered = true;
-            if (timerInterval) clearInterval(timerInterval);
 
             const q = matchQuestions[qIndex];
-            const isCorrect = (selectedIndex === q.correct);
-            const responseTimeMs = Math.round((5.0 - currentQuestionTimeLeft) * 1000);
+            const isCorrect = (optionIndex === q.correct);
+            const responseTimeMs = Math.max(0, (5.0 - currentQuestionTimeLeft) * 1000);
 
-            for (let i = 0; i < 4; i++) {
+            // Highlight buttons locally
+            q.options.forEach((_, i) => {
                 const btn = document.getElementById(`opt-btn-${i}`);
                 if (btn) {
                     btn.disabled = true;
                     if (i === q.correct) {
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-emerald-600/30 border border-emerald-500 rounded-2xl text-left text-xs font-semibold text-white';
-                    } else if (i === selectedIndex) {
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-rose-600/30 border border-rose-500 rounded-2xl text-left text-xs font-semibold text-white';
+                        btn.className = 'w-full py-3.5 px-4 bg-emerald-600 border border-emerald-500 rounded-2xl text-left text-xs font-bold text-white shadow-lg';
+                    } else if (i === optionIndex) {
+                        btn.className = 'w-full py-3.5 px-4 bg-rose-600 border border-rose-500 rounded-2xl text-left text-xs font-bold text-white shadow-lg';
                     } else {
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/40 border border-slate-800/50 rounded-2xl text-left text-xs font-semibold text-slate-500 opacity-50';
+                        btn.className = 'w-full py-3.5 px-4 bg-slate-950/40 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-600';
                     }
                 }
-            }
+            });
 
-            const statusElem = document.getElementById('round-status');
+            const statusEl = document.getElementById('round-status');
             if (isCorrect) {
-                statusElem.className = 'text-center text-xs font-bold text-emerald-400 h-5';
-                statusElem.innerText = '✨ Correct!';
+                statusEl.innerText = '✅ Correct! Waiting for others...';
+                statusEl.className = 'text-center text-xs font-bold text-emerald-400 h-5';
             } else {
-                statusElem.className = 'text-center text-xs font-bold text-rose-400 h-5';
-                statusElem.innerText = selectedIndex === -1 ? '⏱️ Time Out!' : '❌ Incorrect!';
-                if (gameMode === 'suddendeath') {
-                    isEliminated = true;
-                }
+                statusEl.innerText = optionIndex === -1 ? '⏰ Time out!' : '❌ Incorrect!';
+                statusEl.className = 'text-center text-xs font-bold text-rose-400 h-5';
             }
 
-            const pointsEarned = isCorrect ? Math.max(100, Math.round(1000 * (currentQuestionTimeLeft / 5.0))) : 0;
+            // Calculate score if correct
+            const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
+            const doc = await pRef.get();
+            if (!doc.exists) return;
+            const pData = doc.data();
 
-            const playerDocRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
-            const docSnap = await playerDocRef.get();
-            const currentData = docSnap.exists ? docSnap.data() : { score: 0, correctCount: 0 };
+            let pointsEarned = 0;
+            if (isCorrect) {
+                const speedRatio = Math.max(0, currentQuestionTimeLeft / 5.0);
+                pointsEarned = Math.round(1000 * speedRatio);
+            }
 
-            await playerDocRef.update({
-                answer: selectedIndex,
-                score: (currentData.score || 0) + pointsEarned,
-                correctCount: (currentData.correctCount || 0) + (isCorrect ? 1 : 0),
-                eliminated: isEliminated,
+            let newEliminated = pData.eliminated || false;
+            if (gameMode === 'suddendeath' && !isCorrect) {
+                newEliminated = true;
+                isEliminated = true;
+            }
+
+            await pRef.update({
+                answer: optionIndex,
+                correctCount: isCorrect ? (pData.correctCount + 1) : pData.correctCount,
+                score: pData.score + pointsEarned,
+                eliminated: newEliminated,
                 lastResponseTimeMs: responseTimeMs
             });
         }
 
         function renderMultiplayerLeaderboard(playersMap) {
-            const players = Object.keys(playersMap).map(id => ({ id, ...playersMap[id] }));
-            players.sort((a, b) => b.score - a.score);
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '';
 
-            const myData = playersMap[userId];
-            if (myData) {
-                const myRank = players.findIndex(p => p.id === userId) + 1;
-                document.getElementById('sticky-my-rank').innerText = `#${myRank}`;
-                document.getElementById('sticky-total-players').innerText = players.length;
-                document.getElementById('sticky-my-score').innerText = `${myData.score || 0} pts`;
+            const playersArr = Object.values(playersMap).sort((a, b) => b.score - a.score);
+            
+            // Find my rank
+            let myRank = '-';
+            playersArr.forEach((p, idx) => {
+                if (p.name === myName) myRank = `#${idx + 1}`;
+            });
+
+            document.getElementById('sticky-my-rank').innerText = myRank;
+            document.getElementById('sticky-total-players').innerText = playersArr.length;
+            if (playersMap[userId]) {
+                document.getElementById('sticky-my-score').innerText = `${playersMap[userId].score} pts`;
             }
 
-            const listContainer = document.getElementById('leaderboard-list');
-            listContainer.innerHTML = '';
-
-            players.slice(0, 5).forEach((p, index) => {
+            playersArr.slice(0, 5).forEach((p, idx) => {
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-2xl border flex justify-between items-center text-xs font-semibold ${p.id === userId ? 'bg-indigo-950/60 border-indigo-500/50 text-white' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`;
+                div.className = 'px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center text-xs font-semibold';
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
                 div.innerHTML = `
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-6 text-center font-black ${index === 0 ? 'text-amber-400 text-sm' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500'}">#${index + 1}</span>
-                        <span>👤 ${p.name} ${p.eliminated ? '💀' : ''}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-indigo-400">${medal}</span>
+                        <span class="text-white">${p.name}</span>
                     </div>
                     <span class="font-mono font-bold text-emerald-400">${p.score} pts</span>
                 `;
-                listContainer.appendChild(div);
+                listEl.appendChild(div);
             });
 
-            const nextControls = document.getElementById('next-round-controls');
-            const waitingMsg = document.getElementById('waiting-next-msg');
+            db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
+                if (!doc.exists) return;
+                const rData = doc.data();
+                const isFinished = rData.status === 'finished';
 
-            if (isHost) {
-                nextControls.classList.remove('hidden');
-                waitingMsg.classList.add('hidden');
-            } else {
-                nextControls.classList.add('hidden');
-                waitingMsg.classList.add('hidden');
-            }
+                if (isFinished) {
+                    document.getElementById('leaderboard-icon').innerText = '🏆';
+                    document.getElementById('leaderboard-title').innerText = 'Final Standings!';
+                    document.getElementById('leaderboard-subtitle').innerText = 'Match Complete';
+                } else {
+                    document.getElementById('leaderboard-icon').innerText = '📊';
+                    document.getElementById('leaderboard-title').innerText = 'Live Standings';
+                    document.getElementById('leaderboard-subtitle').innerText = `Question ${rData.currentQIndex + 1} of ${targetQuestionCount} Complete`;
+                }
+
+                if (isHost) {
+                    document.getElementById('next-round-controls').classList.remove('hidden');
+                    document.getElementById('waiting-next-msg').classList.add('hidden');
+                    if (isFinished) {
+                        document.getElementById('next-btn').innerText = '🏠 Return to Lobby / New Game';
+                        document.getElementById('next-btn').onclick = () => location.reload();
+                    }
+                } else {
+                    document.getElementById('next-round-controls').classList.add('hidden');
+                    document.getElementById('waiting-next-msg').classList.remove('hidden');
+                }
+            });
         }
     </script>
 </body>
