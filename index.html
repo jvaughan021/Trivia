@@ -118,7 +118,7 @@
                 </ul>
             </div>
 
-            <!-- Host Mode, Participation, Timer & Question Count Controls -->
+            <!-- Host Mode, Participation, Timer, Difficulty & Question Count Controls -->
             <div id="host-mode-selection" class="mb-6 text-left hidden space-y-4">
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
                     <input type="checkbox" id="host-plays-checkbox" checked class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
@@ -134,6 +134,15 @@
                         <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
                             💀 Sudden Death
                         </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Question Difficulty:</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="diff-btn-easy" onclick="window.setRoomDifficulty('easy')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">Easy</button>
+                        <button id="diff-btn-medium" onclick="window.setRoomDifficulty('medium')" class="py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">Medium</button>
+                        <button id="diff-btn-hard" onclick="window.setRoomDifficulty('hard')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">Hard</button>
                     </div>
                 </div>
 
@@ -166,6 +175,7 @@
 
             <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden">
                 Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span> • 
+                Diff: <span id="current-diff-label" class="text-indigo-400 font-bold">Medium</span> • 
                 Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span> • 
                 Length: <span id="current-qcount-label" class="text-indigo-400 font-bold">20 Questions</span>
             </div>
@@ -264,6 +274,7 @@
         let currentRoomCode = null;
         let isHost = false;
         let gameMode = 'classic';
+        let targetDifficulty = 'medium';
         let targetQuestionCount = 20;
         let targetQuestionTimer = 15;
         let isEliminated = false;
@@ -299,14 +310,14 @@
             return txt.value;
         }
 
-        async function fetchMatchQuestions(amount = 20, retries = 3) {
+        async function fetchMatchQuestions(amount = 20, difficulty = 'medium', retries = 3) {
             const seenQuestions = getSeenQuestions();
             let uniqueQuestions = [];
             const requestAmount = Math.min(amount + 10, 50);
 
             for (let attempt = 0; attempt < retries; attempt++) {
                 try {
-                    const res = await fetch(`https://opentdb.com/api.php?amount=${requestAmount}&type=multiple`);
+                    const res = await fetch(`https://opentdb.com/api.php?amount=${requestAmount}&difficulty=${difficulty}&type=multiple`);
                     
                     if (res.status === 429) {
                         await new Promise(r => setTimeout(r, 1200));
@@ -454,11 +465,12 @@
             currentRoomCode = code;
             isHost = true;
             gameMode = 'classic';
+            targetDifficulty = 'medium';
             targetQuestionCount = 20;
             targetQuestionTimer = 15;
             isEliminated = false;
 
-            matchQuestions = await fetchMatchQuestions(20);
+            matchQuestions = await fetchMatchQuestions(20, 'medium');
 
             const roomData = {
                 code: code,
@@ -466,6 +478,7 @@
                 hostName: myName,
                 status: 'waiting',
                 mode: 'classic',
+                difficulty: 'medium',
                 qCount: 20,
                 qTimer: 15,
                 currentQIndex: 0,
@@ -511,23 +524,37 @@
         function setRoomMode(mode) {
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
             db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
+        }
+
+        function setRoomDifficulty(diff) {
+            if (!isHost || !currentRoomCode) return;
+            targetDifficulty = diff;
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+
+            fetchMatchQuestions(targetQuestionCount, diff).then(questions => {
+                matchQuestions = questions;
+                return db.collection('trivia_rooms').doc(currentRoomCode).update({
+                    difficulty: diff,
+                    questions: matchQuestions
+                });
+            }).catch(err => console.error("Difficulty sync error:", err));
         }
 
         function setRoomTimer(seconds) {
             if (!isHost || !currentRoomCode) return;
             targetQuestionTimer = seconds;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
             db.collection('trivia_rooms').doc(currentRoomCode).update({ qTimer: seconds }).catch(err => console.error("Timer sync error:", err));
         }
 
         function setQuestionCount(count) {
             if (!isHost || !currentRoomCode) return;
             targetQuestionCount = count;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
 
-            fetchMatchQuestions(count).then(questions => {
+            fetchMatchQuestions(count, targetDifficulty).then(questions => {
                 matchQuestions = questions;
                 return db.collection('trivia_rooms').doc(currentRoomCode).update({
                     qCount: count,
@@ -597,6 +624,7 @@
                 const data = doc.data();
                 matchQuestions = data.questions || [];
                 gameMode = data.mode || 'classic';
+                targetDifficulty = data.difficulty || 'medium';
                 targetQuestionCount = data.qCount || 20;
                 targetQuestionTimer = data.qTimer || 15;
 
@@ -670,6 +698,15 @@
                     ? 'py-2.5 px-3 rounded-xl border border-rose-500 bg-rose-950/60 text-white font-bold text-xs transition'
                     : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
 
+                ['easy', 'medium', 'hard'].forEach(diff => {
+                    const btn = document.getElementById(`diff-btn-${diff}`);
+                    if (btn) {
+                        btn.className = targetDifficulty === diff
+                            ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
+                            : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+                    }
+                });
+
                 [10, 15, 20, 25, 30].forEach(sec => {
                     const btn = document.getElementById(`timer-btn-${sec}`);
                     if (btn) {
@@ -693,6 +730,7 @@
                 document.getElementById('guest-mode-info').classList.remove('hidden');
                 document.getElementById('guest-waiting-msg').classList.remove('hidden');
                 document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic' : '💀 Sudden Death';
+                document.getElementById('current-diff-label').innerText = targetDifficulty.charAt(0).toUpperCase() + targetDifficulty.slice(1);
                 document.getElementById('current-timer-label').innerText = `${targetQuestionTimer}s`;
                 document.getElementById('current-qcount-label').innerText = `${targetQuestionCount} Questions`;
             }
