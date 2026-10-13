@@ -192,7 +192,6 @@
     </footer>
 
     <script>
-        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC_F885qJNZ8zqs_FeIFpdQUutwfI2PTtQ",
             authDomain: "trivia-e7016.firebaseapp.com",
@@ -211,7 +210,6 @@
             console.error("Firebase init error:", e);
         }
 
-        // Unique User Identity
         let userId = localStorage.getItem('trivia_user_id');
         if (!userId) {
             userId = 'user_' + Math.random().toString(36).substring(2, 9);
@@ -227,10 +225,8 @@
         let unsubscribeRoom = null;
         let timerInterval = null;
         let hasAnswered = false;
-        let currentQuestionStartTime = 0;
         let currentQuestionTimeLeft = 5.0;
 
-        // Solo game state tracking
         let soloCurrentQIndex = 0;
         let soloScore = 0;
         let soloCorrectCount = 0;
@@ -386,10 +382,11 @@
 
             const q = matchQuestions[soloCurrentQIndex];
             const isCorrect = optionIndex === q.correct;
+            const speedBonus = isCorrect ? Math.round(currentQuestionTimeLeft * 100) : 0;
+            const roundPoints = isCorrect ? (1000 + speedBonus) : 0;
 
             if (isCorrect) {
-                const speedBonus = Math.round(currentQuestionTimeLeft * 100); // Up to 500 bonus pts
-                soloScore += (1000 + speedBonus);
+                soloScore += roundPoints;
                 soloCorrectCount += 1;
             } else if (gameMode === 'suddendeath') {
                 isEliminated = true;
@@ -408,7 +405,7 @@
             }
 
             document.getElementById('round-status').innerText = isCorrect 
-                ? `Correct! +${1000 + Math.round(currentQuestionTimeLeft * 100)} pts` 
+                ? `Correct! +${roundPoints} pts` 
                 : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
 
             setTimeout(() => {
@@ -709,7 +706,6 @@
             document.getElementById('leaderboard-title').innerText = isFinished ? 'Final Victory!' : 'Live Standings';
             document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Game Over - Final Ranks' : `After Question ${data.currentQIndex + 1}`;
 
-            // Sort by Total Points (Accuracy + Speed)
             const playersArr = Object.values(data.players || {}).sort((a, b) => (b.score || 0) - (a.score || 0));
             const listEl = document.getElementById('leaderboard-list');
             listEl.innerHTML = '';
