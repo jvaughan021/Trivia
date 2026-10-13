@@ -206,7 +206,7 @@
             </div>
 
             <div id="round-status" class="text-center text-xs font-semibold text-slate-400 h-5">
-                Lock in your answer!
+                Select your answer!
             </div>
         </section>
 
@@ -343,7 +343,7 @@
                             uniqueQuestions.push({
                                 q: formattedQ,
                                 options: options,
-                                correct: correctIndex
+                                correct: Number(correctIndex)
                             });
 
                             markQuestionAsSeen(formattedQ);
@@ -359,7 +359,6 @@
                 }
             }
 
-            // Fallback retry with no difficulty constraint to force real OpenTDB questions
             if (uniqueQuestions.length < amount) {
                 try {
                     const fallbackRes = await fetch(`https://opentdb.com/api.php?amount=${amount - uniqueQuestions.length}&type=multiple`);
@@ -376,7 +375,7 @@
                             uniqueQuestions.push({
                                 q: formattedQ,
                                 options: options,
-                                correct: correctIndex
+                                correct: Number(correctIndex)
                             });
                         }
                     }
@@ -746,7 +745,7 @@
             const players = Object.values(playersMap);
             if (players.length === 0) return;
             const activePlayers = players.filter(p => !p.eliminated);
-            const allAnswered = activePlayers.every(p => p.answer !== null);
+            const allAnswered = activePlayers.every(p => p.answer !== null && p.answer !== undefined);
 
             if (allAnswered && activePlayers.length > 0) {
                 await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
@@ -785,17 +784,20 @@
             if (isHostSpectator) {
                 document.getElementById('round-status').innerHTML = '<span class="text-amber-400 font-bold">🎙️ Host Spectator Mode (Live Question)</span>';
             } else {
-                document.getElementById('round-status').innerText = 'Lock in your answer!';
+                document.getElementById('round-status').innerText = 'Select your answer!';
             }
 
             const optsContainer = document.getElementById('options-container');
             optsContainer.innerHTML = '';
 
+            const correctIdxNum = Number(qData.correct);
+
             qData.options.forEach((optText, index) => {
                 const btn = document.createElement('button');
+                btn.setAttribute('data-index', index);
                 
                 if (isHostSpectator) {
-                    if (index === qData.correct) {
+                    if (index === correctIdxNum) {
                         btn.className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
                         btn.innerHTML = `<span><span class="text-emerald-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span> <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-bold">CORRECT</span>`;
                     } else {
@@ -806,7 +808,7 @@
                 } else {
                     btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-2xl text-white font-semibold text-sm text-left transition flex items-center justify-between group';
                     btn.innerHTML = `<span><span class="text-indigo-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
-                    btn.onclick = () => submitAnswer(index, qData.correct, false, timeLimit);
+                    btn.onclick = () => submitAnswer(index, correctIdxNum, false, timeLimit);
                 }
                 
                 optsContainer.appendChild(btn);
@@ -829,7 +831,7 @@
                 if (currentQuestionTimeLeft <= 0) {
                     clearInterval(timerInterval);
                     if (!hasAnswered && !isHostSpectator) {
-                        submitAnswer(-1, qData.correct, true, timeLimit);
+                        submitAnswer(-1, correctIdxNum, true, timeLimit);
                     }
                 }
             }, 100);
@@ -840,10 +842,13 @@
             hasAnswered = true;
             if (timerInterval) clearInterval(timerInterval);
 
-            const buttons = document.querySelectorAll('.option-btn');
+            const selectedIdxNum = Number(selectedIndex);
+            const correctIdxNum = Number(correctIndex);
+
+            const buttons = document.querySelectorAll('#options-container .option-btn');
             buttons.forEach(btn => btn.disabled = true);
 
-            const isCorrect = (selectedIndex === correctIndex);
+            const isCorrect = (!isTimeout && selectedIdxNum === correctIdxNum);
             const responseTimeMs = Math.round((timeLimit - currentQuestionTimeLeft) * 1000);
 
             let pointsEarned = 0;
@@ -857,14 +862,16 @@
                 statusElem.innerHTML = '<span class="text-amber-400 font-bold">⏰ Time Expired!</span>';
             } else if (isCorrect) {
                 statusElem.innerHTML = `<span class="text-emerald-400 font-bold">✅ Correct! (+${pointsEarned} pts)</span>`;
-                buttons[selectedIndex].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+                if (buttons[selectedIdxNum]) {
+                    buttons[selectedIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+                }
             } else {
                 statusElem.innerHTML = '<span class="text-rose-400 font-bold">❌ Incorrect!</span>';
-                if (selectedIndex >= 0 && buttons[selectedIndex]) {
-                    buttons[selectedIndex].className = 'option-btn w-full py-3.5 px-4 bg-rose-950/80 border border-rose-500 rounded-2xl text-rose-200 font-semibold text-sm text-left flex items-center justify-between';
+                if (selectedIdxNum >= 0 && buttons[selectedIdxNum]) {
+                    buttons[selectedIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-rose-950/80 border border-rose-500 rounded-2xl text-rose-200 font-semibold text-sm text-left flex items-center justify-between';
                 }
-                if (buttons[correctIndex]) {
-                    buttons[correctIndex].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+                if (buttons[correctIdxNum]) {
+                    buttons[correctIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
                 }
             }
 
@@ -883,7 +890,7 @@
                     }
 
                     await pRef.update({
-                        answer: selectedIndex,
+                        answer: selectedIdxNum,
                         score: newScore,
                         correctCount: newCorrect,
                         lastResponseTimeMs: responseTimeMs,
