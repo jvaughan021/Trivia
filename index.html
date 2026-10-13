@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Clash - Multiplayer Quiz Battle</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase JS SDK v10 (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .option-btn {
+            transition: all 0.15s ease-in-out;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.92); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between items-center p-4 sm:p-6">
+
+    <!-- Header -->
+    <header class="w-full max-w-xl text-center py-3">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>2-8 Players • Solo & Sudden Death Supported</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
+            TRIVIA <span class="text-indigo-400">CLASH</span>
+        </h1>
+        <p class="text-slate-400 text-xs sm:text-sm mt-1">20 Questions • 5-Second Anti-Cheat Timer</p>
+    </header>
+
+    <main class="w-full max-w-md my-auto">
+
+        <!-- LOBBY VIEW -->
+        <section id="view-lobby" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl animate-pop">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold text-white">Choose Your Game Mode</h2>
+                <p class="text-slate-400 text-xs mt-1">Play solo or challenge up to 8 friends!</p>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Your Nickname</label>
+                    <input type="text" id="username-input" placeholder="Enter your name" maxlength="12" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-3 text-white placeholder-slate-600 font-semibold outline-none transition">
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="window.startSoloGame('classic')" class="py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/25 transition text-xs flex flex-col items-center justify-center gap-1">
+                        <span>🎮 Play Solo</span>
+                        <span class="text-[10px] text-emerald-200 font-normal">(Classic)</span>
+                    </button>
+
+                    <button onclick="window.startSoloGame('suddendeath')" class="py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold rounded-2xl shadow-lg shadow-rose-600/25 transition text-xs flex flex-col items-center justify-center gap-1">
+                        <span>💀 Sudden Death</span>
+                        <span class="text-[10px] text-rose-200 font-normal">(1 Miss = Out)</span>
+                    </button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-4 text-slate-500 text-[10px] uppercase tracking-widest font-semibold">or multiplayer</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <button onclick="window.createRoom()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2">
+                    ⚡ Create Game Room (2-8 Players)
+                </button>
+
+                <div class="space-y-2 pt-1">
+                    <input type="text" id="room-code-input" placeholder="Room Code (e.g. A9B2)" maxlength="4" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-2.5 text-center text-white placeholder-slate-600 font-mono text-base tracking-widest uppercase outline-none transition">
+                    <button onclick="window.joinRoom()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white font-bold rounded-2xl border border-slate-700 transition text-sm">
+                        🔗 Join Room
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- WAITING LOBBY VIEW -->
+        <section id="view-waiting" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl text-center hidden">
+            <h2 class="text-xl font-bold text-white mb-1">Lobby Room</h2>
+            <p class="text-slate-400 text-xs mb-4">Share code with friends to join (Up to 8 players):</p>
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 mb-6 flex items-center justify-center gap-3">
+                <span id="display-room-code" class="text-3xl font-mono font-black tracking-widest text-indigo-400">----</span>
+            </div>
+
+            <div class="text-left mb-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Connected Players (<span id="player-count">0</span>/8):</h3>
+                <ul id="players-list" class="space-y-2 max-h-40 overflow-y-auto">
+                    <!-- Dynamic player list -->
+                </ul>
+            </div>
+
+            <!-- Host Mode Selector -->
+            <div id="host-mode-selection" class="mb-6 text-left hidden">
+                <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Select Game Rules (Host Only):</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="mode-btn-classic" onclick="window.setRoomMode('classic')" class="py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">
+                        🎯 Classic (20 Qs)
+                    </button>
+                    <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
+                        💀 Sudden Death
+                    </button>
+                </div>
+            </div>
+
+            <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden">
+                Mode Selected: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic (20 Qs)</span>
+            </div>
+
+            <div id="host-controls" class="hidden">
+                <button onclick="window.startGame()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">
+                    🚀 Start Match
+                </button>
+            </div>
+            <div id="guest-waiting-msg" class="text-xs text-indigo-300 animate-pulse font-medium">
+                Waiting for host to start the game...
+            </div>
+        </section>
+
+        <!-- QUESTION ARENA VIEW -->
+        <section id="view-game" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl hidden">
+            <div class="flex justify-between items-center bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-2.5 mb-4">
+                <span id="q-progress" class="text-xs font-bold text-indigo-400">Question 1 / 20</span>
+                <span id="q-timer" class="text-sm font-mono font-black text-amber-400 animate-pulse">⏱️ 5.0s</span>
+            </div>
+
+            <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 mb-5 text-center min-h-[110px] flex items-center justify-center">
+                <p id="q-text" class="text-base font-bold text-white leading-snug">Loading question...</p>
+            </div>
+
+            <div id="options-container" class="grid grid-cols-1 gap-3 mb-4">
+                <!-- 4 Options generated dynamically -->
+            </div>
+
+            <div id="round-status" class="text-center text-xs font-semibold text-slate-400 h-5">
+                Lock in your answer!
+            </div>
+        </section>
+
+        <!-- SCOREBOARD / LEADERBOARD VIEW -->
+        <section id="view-leaderboard" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl text-center hidden">
+            <div id="leaderboard-icon" class="text-5xl mb-2">📊</div>
+            <h2 id="leaderboard-title" class="text-2xl font-black text-white mb-1">Live Standings</h2>
+            <p id="leaderboard-subtitle" class="text-slate-400 text-xs mb-6">Current player ranks</p>
+
+            <div id="leaderboard-list" class="space-y-2.5 mb-6 text-left">
+                <!-- Ranked players list -->
+            </div>
+
+            <div id="next-round-controls" class="hidden">
+                <button id="next-btn" onclick="window.nextQuestion()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg transition">
+                    Next Question ➡️
+                </button>
+            </div>
+            <p id="waiting-next-msg" class="text-xs text-indigo-300 animate-pulse hidden">
+                Waiting for host to proceed...
+            </p>
+        </section>
+
+    </main>
+
+    <!-- Footer Credit -->
+    <footer class="py-4 text-center text-xs text-slate-500">
+        Created by <span class="text-indigo-400 font-bold">Jack Vaughan</span>
+    </footer>
+
+    <script>
+        // Your Firebase Configuration (Integrated)
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_F885qJNZ8zqs_FeIFpdQUutwfI2PTtQ",
+            authDomain: "trivia-e7016.firebaseapp.com",
+            projectId: "trivia-e7016",
+            storageBucket: "trivia-e7016.firebasestorage.app",
+            messagingSenderId: "649877206020",
+            appId: "1:649877206020:web:8b6259b37c98c9fc687151",
+            measurementId: "G-L1DQJGEMW3"
+        };
+
+        let db = null;
+        try {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } catch (e) {
+            console.error("Firebase init error:", e);
+        }
+
+        // Unique User Identity
+        let userId = localStorage.getItem('trivia_user_id');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('trivia_user_id', userId);
+        }
+
+        let myName = '';
+        let currentRoomCode = null;
+        let isHost = false;
+        let isSolo = false;
+        let gameMode = 'classic'; // 'classic' or 'suddendeath'
+        let isEliminated = false;
+        let unsubscribeRoom = null;
+        let timerInterval = null;
+        let hasAnswered = false;
+
+        // Solo game state tracking
+        let soloCurrentQIndex = 0;
+        let soloScore = 0;
+        let matchQuestions = [];
+
+        // Curated Question Bank
+        const AUTHORED_QUESTIONS = [
+            { q: "Which game holds the record for best-selling video game of all time?", options: ["Minecraft", "Tetris", "GTA V", "Wii Sports"], correct: 0 },
+            { q: "What does 'TARDIS' stand for in Doctor Who?", options: ["Time And Relative Dimension In Space", "Time And Relativistic Distance In Space", "Travel And Relative Dimension In Space", "Time And Relative Displacement In Space"], correct: 0 },
+            { q: "Which framework is widely used for building JS bots in Minecraft?", options: ["Mineflayer", "Phaser", "Three.js", "Socket.io"], correct: 0 },
+            { q: "What element does 'H' stand for on the periodic table?", options: ["Helium", "Hydrogen", "Holmium", "Hassium"], correct: 1 },
+            { q: "In what year was the original iPhone released?", options: ["2005", "2007", "2009", "2010"], correct: 1 },
+            { q: "Which planet is known as the Red Planet?", options: ["Venus", "Jupiter", "Mars", "Saturn"], correct: 2 },
+            { q: "What is the capital city of Scotland?", options: ["Glasgow", "Dundee", "Aberdeen", "Edinburgh"], correct: 3 },
+            { q: "How many bones are in the adult human body?", options: ["186", "206", "216", "226"], correct: 1 },
+            { q: "Who directed the sci-fi movie 'Inception'?", options: ["Steven Spielberg", "Christopher Nolan", "Quentin Tarantino", "James Cameron"], correct: 1 },
+            { q: "Which language is considered the native scripting language of web browsers?", options: ["Python", "C++", "JavaScript", "Java"], correct: 2 },
+            { q: "What is the primary crafting ingredient for Glass in Minecraft?", options: ["Stone", "Sand", "Gravel", "Clay"], correct: 1 },
+            { q: "What is the speed of light in a vacuum (approximate)?", options: ["150,000 km/s", "300,000 km/s", "450,000 km/s", "600,000 km/s"], correct: 1 },
+            { q: "Which organ in the human body consumes the most energy?", options: ["Heart", "Liver", "Brain", "Lungs"], correct: 2 },
+            { q: "What year did World War II officially end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
+            { q: "Which game features 'The Master Chief' as its main protagonist?", options: ["Doom", "Halo", "Gears of War", "Mass Effect"], correct: 1 },
+        ];
+
+        // Procedural Question Generator Engine
+        function generateProceduralQuestion(id) {
+            const types = ['math', 'science_atomic', 'year_calc'];
+            const type = types[id % types.length];
+
+            if (type === 'math') {
+                const a = Math.floor(Math.random() * 40) + 12;
+                const b = Math.floor(Math.random() * 40) + 12;
+                const ans = a + b;
+                const options = [ans, ans + 3, ans - 4, ans + 10].sort(() => Math.random() - 0.5);
+                return {
+                    q: `Quick Math: What is ${a} + ${b}?`,
+                    options: options.map(String),
+                    correct: options.indexOf(ans)
+                };
+            } else if (type === 'science_atomic') {
+                const elements = [
+                    { name: "Carbon", num: 6 },
+                    { name: "Oxygen", num: 8 },
+                    { name: "Nitrogen", num: 7 },
+                    { name: "Gold", num: 79 },
+                    { name: "Silver", num: 47 }
+                ];
+                const el = elements[Math.floor(Math.random() * elements.length)];
+                const options = [el.num, el.num + 2, Math.max(1, el.num - 3), el.num + 5].sort(() => Math.random() - 0.5);
+                return {
+                    q: `What is the atomic number of ${el.name}?`,
+                    options: options.map(String),
+                    correct: options.indexOf(el.num)
+                };
+            } else {
+                const diff = Math.floor(Math.random() * 15) + 5;
+                const baseYear = 2026;
+                const target = baseYear - diff;
+                const options = [target, target + 2, target - 3, target + 5].sort(() => Math.random() - 0.5);
+                return {
+                    q: `Which year was exactly ${diff} years ago from 2026?`,
+                    options: options.map(String),
+                    correct: options.indexOf(target)
+                };
+            }
+        }
+
+        function generate20MatchQuestions() {
+            const shuffledAuthored = [...AUTHORED_QUESTIONS].sort(() => Math.random() - 0.5);
+            const pool = [...shuffledAuthored];
+            let proceduralId = 1;
+            while (pool.length < 20) {
+                pool.push(generateProceduralQuestion(proceduralId++));
+            }
+            return pool.slice(0, 20);
+        }
+
+        function switchView(viewId) {
+            ['view-lobby', 'view-waiting', 'view-game', 'view-leaderboard'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function generateCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let c = '';
+            for (let i = 0; i < 4; i++) c += chars.charAt(Math.floor(Math.random() * chars.length));
+            return c;
+        }
+
+        function getUsername() {
+            const input = document.getElementById('username-input').value.trim();
+            if (!input) {
+                alert('Please enter a nickname first!');
+                return null;
+            }
+            myName = input;
+            return input;
+        }
+
+        // --- SOLO PRACTICE MODE ---
+        function startSoloGame(mode) {
+            if (!getUsername()) return;
+            isSolo = true;
+            isHost = false;
+            gameMode = mode;
+            isEliminated = false;
+            soloCurrentQIndex = 0;
+            soloScore = 0;
+            matchQuestions = generate20MatchQuestions();
+            
+            renderSoloQuestion();
+            switchView('view-game');
+        }
+
+        function renderSoloQuestion() {
+            hasAnswered = false;
+            const q = matchQuestions[soloCurrentQIndex];
+
+            document.getElementById('q-progress').innerText = `Question ${soloCurrentQIndex + 1} / 20 ${gameMode === 'suddendeath' ? '💀' : ''}`;
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('round-status').innerText = 'Lock in your answer!';
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            if (isEliminated) {
+                document.getElementById('round-status').innerText = '💀 You are ELIMINATED! Spectating...';
+                startTimer(5, () => {
+                    renderSoloLeaderboard();
+                    switchView('view-leaderboard');
+                });
+                return;
+            }
+
+            q.options.forEach((optText, i) => {
+                const btn = document.createElement('button');
+                btn.id = `opt-btn-${i}`;
+                btn.onclick = () => submitSoloAnswer(i);
+                btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-200 transition';
+                btn.innerText = `${['A', 'B', 'C', 'D'][i]}. ${optText}`;
+                container.appendChild(btn);
+            });
+
+            startTimer(5, () => {
+                if (!hasAnswered) submitSoloAnswer(-1);
+            });
+        }
+
+        function submitSoloAnswer(optionIndex) {
+            if (hasAnswered) return;
+            hasAnswered = true;
+            clearInterval(timerInterval);
+
+            const q = matchQuestions[soloCurrentQIndex];
+            const isCorrect = optionIndex === q.correct;
+
+            if (isCorrect) {
+                soloScore += 1;
+            } else if (gameMode === 'suddendeath') {
+                isEliminated = true;
+            }
+
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`opt-btn-${i}`);
+                if (btn) btn.disabled = true;
+            }
+
+            if (optionIndex >= 0) {
+                const selectedBtn = document.getElementById(`opt-btn-${optionIndex}`);
+                if (selectedBtn) {
+                    selectedBtn.className += isCorrect ? ' bg-emerald-950/80 border-emerald-500 text-emerald-300' : ' bg-rose-950/80 border-rose-500 text-rose-300';
+                }
+            }
+
+            document.getElementById('round-status').innerText = isCorrect 
+                ? 'Correct! +1 pt' 
+                : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
+
+            setTimeout(() => {
+                renderSoloLeaderboard();
+                switchView('view-leaderboard');
+            }, 1200);
+        }
+
+        function renderSoloLeaderboard() {
+            const isFinished = soloCurrentQIndex >= 19 || (gameMode === 'suddendeath' && isEliminated);
+            document.getElementById('leaderboard-icon').innerText = isEliminated ? '💀' : (isFinished ? '🏆' : '📊');
+            document.getElementById('leaderboard-title').innerText = isEliminated ? 'Eliminated!' : (isFinished ? 'Solo Victory!' : 'Current Standings');
+            document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Match Completed' : `After Question ${soloCurrentQIndex + 1}`;
+
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = `
+                <div class="px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center text-xs font-bold">
+                    <div class="flex items-center gap-2">
+                        <span>${isEliminated ? '💀' : '🥇'}</span>
+                        <span class="text-white">${myName} (Solo)</span>
+                    </div>
+                    <span class="text-indigo-400 font-mono">${soloScore} / ${soloCurrentQIndex + 1} pts</span>
+                </div>
+            `;
+
+            document.getElementById('next-round-controls').classList.remove('hidden');
+            document.getElementById('next-btn').innerText = isFinished ? '🎮 Play Again' : 'Next Question ➡️';
+            document.getElementById('waiting-next-msg').classList.add('hidden');
+        }
+
+        // --- MULTIPLAYER CODE ---
+        async function createRoom() {
+            if (!getUsername()) return;
+            if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
+            
+            isSolo = false;
+            const code = generateCode();
+            currentRoomCode = code;
+            isHost = true;
+            gameMode = 'classic';
+            isEliminated = false;
+            matchQuestions = generate20MatchQuestions();
+
+            const roomData = {
+                code: code,
+                hostId: userId,
+                status: 'waiting',
+                mode: 'classic',
+                currentQIndex: 0,
+                questions: matchQuestions,
+                players: {
+                    [userId]: { name: myName, score: 0, answer: null, eliminated: false }
+                },
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection('trivia_rooms').doc(code).set(roomData);
+            listenToRoom(code);
+        }
+
+        async function setRoomMode(mode) {
+            if (!isHost || !currentRoomCode) return;
+            gameMode = mode;
+            await db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode });
+        }
+
+        async function joinRoom() {
+            if (!getUsername()) return;
+            if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
+
+            isSolo = false;
+            isEliminated = false;
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (code.length !== 4) {
+                alert('Please enter a 4-letter room code.');
+                return;
+            }
+
+            const ref = db.collection('trivia_rooms').doc(code);
+            const doc = await ref.get();
+            if (!doc.exists) { alert('Room not found!'); return; }
+
+            const data = doc.data();
+            const playerKeys = Object.keys(data.players || {});
+            if (playerKeys.length >= 8) { alert('Room is full! (Max 8 players)'); return; }
+            if (data.status !== 'waiting') { alert('Game already in progress!'); return; }
+
+            currentRoomCode = code;
+            isHost = false;
+
+            const updateObj = {};
+            updateObj[`players.${userId}`] = { name: myName, score: 0, answer: null, eliminated: false };
+            await ref.update(updateObj);
+
+            listenToRoom(code);
+        }
+
+        function listenToRoom(code) {
+            if (unsubscribeRoom) unsubscribeRoom();
+
+            unsubscribeRoom = db.collection('trivia_rooms').doc(code).onSnapshot((doc) => {
+                if (!doc.exists) return;
+                updateUIState(doc.data());
+            });
+        }
+
+        function updateUIState(data) {
+            matchQuestions = data.questions || [];
+            gameMode = data.mode || 'classic';
+            isEliminated = data.players[userId]?.eliminated || false;
+
+            if (data.status === 'waiting') {
+                document.getElementById('display-room-code').innerText = data.code;
+                const playersList = document.getElementById('players-list');
+                playersList.innerHTML = '';
+
+                const playerKeys = Object.keys(data.players || {});
+                document.getElementById('player-count').innerText = playerKeys.length;
+
+                playerKeys.forEach(pId => {
+                    const p = data.players[pId];
+                    const li = document.createElement('li');
+                    li.className = 'px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center text-xs font-semibold';
+                    li.innerHTML = `<span>👤 ${p.name}</span> ${pId === data.hostId ? '<span class="text-amber-400 text-[10px]">HOST</span>' : ''}`;
+                    playersList.appendChild(li);
+                });
+
+                if (isHost) {
+                    document.getElementById('host-controls').classList.remove('hidden');
+                    document.getElementById('host-mode-selection').classList.remove('hidden');
+                    document.getElementById('guest-mode-info').classList.add('hidden');
+                    document.getElementById('guest-waiting-msg').classList.add('hidden');
+
+                    const isClassic = gameMode === 'classic';
+                    document.getElementById('mode-btn-classic').className = isClassic 
+                        ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
+                        : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+                    document.getElementById('mode-btn-suddendeath').className = !isClassic 
+                        ? 'py-2.5 px-3 rounded-xl border border-rose-500 bg-rose-950/60 text-white font-bold text-xs transition'
+                        : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+                } else {
+                    document.getElementById('host-controls').classList.add('hidden');
+                    document.getElementById('host-mode-selection').classList.add('hidden');
+                    document.getElementById('guest-mode-info').classList.remove('hidden');
+                    document.getElementById('guest-waiting-msg').classList.remove('hidden');
+                    document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic (20 Qs)' : '💀 Sudden Death';
+                }
+
+                switchView('view-waiting');
+            } else if (data.status === 'playing') {
+                renderMultiplayerQuestion(data);
+                switchView('view-game');
+            } else if (data.status === 'leaderboard' || data.status === 'finished') {
+                renderMultiplayerLeaderboard(data);
+                switchView('view-leaderboard');
+            }
+        }
+
+        async function startGame() {
+            if (!isHost) return;
+            await db.collection('trivia_rooms').doc(currentRoomCode).update({
+                status: 'playing',
+                currentQIndex: 0
+            });
+        }
+
+        let currentQIndexRendered = -1;
+
+        function renderMultiplayerQuestion(data) {
+            const qIndex = data.currentQIndex;
+            const q = matchQuestions[qIndex];
+
+            if (currentQIndexRendered !== qIndex) {
+                currentQIndexRendered = qIndex;
+                hasAnswered = false;
+
+                document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / 20 ${gameMode === 'suddendeath' ? '💀' : ''}`;
+                document.getElementById('q-text').innerText = q.q;
+
+                const container = document.getElementById('options-container');
+                container.innerHTML = '';
+
+                if (isEliminated) {
+                    document.getElementById('round-status').innerText = '💀 You are ELIMINATED! Spectating match...';
+                    startTimer(5, null);
+                    return;
+                }
+
+                document.getElementById('round-status').innerText = 'Lock in your answer!';
+
+                q.options.forEach((optText, i) => {
+                    const btn = document.createElement('button');
+                    btn.id = `opt-btn-${i}`;
+                    btn.onclick = () => submitMultiplayerAnswer(i, qIndex);
+                    btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-200 transition';
+                    btn.innerText = `${['A', 'B', 'C', 'D'][i]}. ${optText}`;
+                    container.appendChild(btn);
+                });
+
+                startTimer(5, () => {
+                    if (!hasAnswered && !isEliminated) submitMultiplayerAnswer(-1, qIndex);
+                });
+            }
+        }
+
+        function startTimer(seconds, onComplete) {
+            clearInterval(timerInterval);
+            let timeLeft = seconds;
+            const timerEl = document.getElementById('q-timer');
+            timerEl.innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
+
+            const startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                timeLeft = Math.max(0, seconds - elapsed);
+                timerEl.innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (onComplete) onComplete();
+                }
+            }, 100);
+        }
+
+        async function submitMultiplayerAnswer(optionIndex, qIndex) {
+            if (hasAnswered || isEliminated) return;
+            hasAnswered = true;
+            clearInterval(timerInterval);
+
+            const q = matchQuestions[qIndex];
+            const isCorrect = optionIndex === q.correct;
+            const willBeEliminated = !isCorrect && gameMode === 'suddendeath';
+
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`opt-btn-${i}`);
+                if (btn) btn.disabled = true;
+            }
+
+            if (optionIndex >= 0) {
+                const selectedBtn = document.getElementById(`opt-btn-${optionIndex}`);
+                if (selectedBtn) {
+                    selectedBtn.className += isCorrect ? ' bg-emerald-950/80 border-emerald-500 text-emerald-300' : ' bg-rose-950/80 border-rose-500 text-rose-300';
+                }
+            }
+
+            document.getElementById('round-status').innerText = isCorrect 
+                ? 'Correct! +1 pt' 
+                : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
+
+            const roomRef = db.collection('trivia_rooms').doc(currentRoomCode);
+            const doc = await roomRef.get();
+            const currentScore = doc.data().players[userId]?.score || 0;
+
+            const updateObj = {};
+            updateObj[`players.${userId}.score`] = currentScore + (isCorrect ? 1 : 0);
+            updateObj[`players.${userId}.answer`] = optionIndex;
+            if (willBeEliminated) updateObj[`players.${userId}.eliminated`] = true;
+
+            await roomRef.update(updateObj);
+
+            if (isHost) {
+                setTimeout(async () => {
+                    await roomRef.update({ status: 'leaderboard' });
+                }, 1500);
+            }
+        }
+
+        function renderMultiplayerLeaderboard(data) {
+            clearInterval(timerInterval);
+            const isFinished = data.status === 'finished' || data.currentQIndex >= 19;
+
+            document.getElementById('leaderboard-icon').innerText = isFinished ? '🏆' : '📊';
+            document.getElementById('leaderboard-title').innerText = isFinished ? 'Final Victory!' : 'Live Standings';
+            document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Game Over - Final Scores' : `After Question ${data.currentQIndex + 1}`;
+
+            const playersArr = Object.values(data.players || {}).sort((a, b) => b.score - a.score);
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '';
+
+            const ordinalLabels = ['🥇 1st', '🥈 2nd', '🥉 3rd', '4th', '5th', '6th', '7th', '8th'];
+
+            playersArr.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.className = 'px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center text-xs font-bold';
+                const rankLabel = ordinalLabels[idx] || `#${idx + 1}`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span>${p.eliminated ? '💀' : rankLabel}</span>
+                        <span class="${p.eliminated ? 'text-rose-400 line-through' : 'text-white'}">${p.name}</span>
+                    </div>
+                    <span class="text-indigo-400 font-mono">${p.score} pts</span>
+                `;
+                listEl.appendChild(div);
+            });
+
+            if (isHost && !isFinished) {
+                document.getElementById('next-round-controls').classList.remove('hidden');
+                document.getElementById('next-btn').innerText = 'Next Question ➡️';
+                document.getElementById('waiting-next-msg').classList.add('hidden');
+            } else if (!isHost && !isFinished) {
+                document.getElementById('next-round-controls').classList.add('hidden');
+                document.getElementById('waiting-next-msg').classList.remove('hidden');
+            } else {
+                document.getElementById('next-round-controls').classList.add('hidden');
+                document.getElementById('waiting-next-msg').classList.add('hidden');
+            }
+        }
+
+        async function nextQuestion() {
+            if (isSolo) {
+                if (soloCurrentQIndex < 19 && !(gameMode === 'suddendeath' && isEliminated)) {
+                    soloCurrentQIndex++;
+                    renderSoloQuestion();
+                    switchView('view-game');
+                } else {
+                    switchView('view-lobby');
+                }
+                return;
+            }
+
+            if (!isHost) return;
+            const roomRef = db.collection('trivia_rooms').doc(currentRoomCode);
+            const doc = await roomRef.get();
+            const data = doc.data();
+
+            const nextIndex = data.currentQIndex + 1;
+            if (nextIndex < 20) {
+                await roomRef.update({
+                    status: 'playing',
+                    currentQIndex: nextIndex
+                });
+            } else {
+                await roomRef.update({ status: 'finished' });
+            }
+        }
+
+        window.startSoloGame = startSoloGame;
+        window.createRoom = createRoom;
+        window.setRoomMode = setRoomMode;
+        window.joinRoom = joinRoom;
+        window.startGame = startGame;
+        window.nextQuestion = nextQuestion;
+    </script>
+</body>
+</html>
