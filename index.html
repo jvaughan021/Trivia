@@ -45,7 +45,7 @@
     <header class="w-full max-w-xl text-center py-3">
         <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>2-8 Players • Solo & Sudden Death Supported</span>
+            <span>10,000+ Question Pool Active</span>
         </div>
         <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
             TRIVIA <span class="text-indigo-400">CLASH</span>
@@ -135,7 +135,7 @@
             </div>
 
             <div id="host-controls" class="hidden">
-                <button onclick="window.startGame()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">
+                <button id="start-game-btn" onclick="window.startGame()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition">
                     🚀 Start Match
                 </button>
             </div>
@@ -233,7 +233,45 @@
         let soloScore = 0;
         let matchQuestions = [];
 
-        // Curated Question Bank
+        // Helper function to decode HTML entities in API questions
+        function decodeHTML(html) {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        // Fetch 20 unique questions from 10,000+ pool API with local fallback
+        async function fetch20MatchQuestions() {
+            try {
+                const res = await fetch('https://opentdb.com/api.php?amount=20&type=multiple');
+                const data = await res.json();
+                
+                if (data.response_code === 0 && data.results.length === 20) {
+                    return data.results.map(item => {
+                        const formattedQ = decodeHTML(item.question);
+                        const correct = decodeHTML(item.correct_answer);
+                        const incorrects = item.incorrect_answers.map(decodeHTML);
+                        
+                        const options = [...incorrects];
+                        const correctIndex = Math.floor(Math.random() * 4);
+                        options.splice(correctIndex, 0, correct);
+
+                        return {
+                            q: formattedQ,
+                            options: options,
+                            correct: correctIndex
+                        };
+                    });
+                }
+            } catch (err) {
+                console.warn("API offline, falling back to local question generator engine.", err);
+            }
+
+            // Fallback: Local Generator Engine
+            return generateLocal20Questions();
+        }
+
+        // Local Question Engine (Fallback)
         const AUTHORED_QUESTIONS = [
             { q: "Which game holds the record for best-selling video game of all time?", options: ["Minecraft", "Tetris", "GTA V", "Wii Sports"], correct: 0 },
             { q: "What does 'TARDIS' stand for in Doctor Who?", options: ["Time And Relative Dimension In Space", "Time And Relativistic Distance In Space", "Travel And Relative Dimension In Space", "Time And Relative Displacement In Space"], correct: 0 },
@@ -245,63 +283,24 @@
             { q: "How many bones are in the adult human body?", options: ["186", "206", "216", "226"], correct: 1 },
             { q: "Who directed the sci-fi movie 'Inception'?", options: ["Steven Spielberg", "Christopher Nolan", "Quentin Tarantino", "James Cameron"], correct: 1 },
             { q: "Which language is considered the native scripting language of web browsers?", options: ["Python", "C++", "JavaScript", "Java"], correct: 2 },
-            { q: "What is the primary crafting ingredient for Glass in Minecraft?", options: ["Stone", "Sand", "Gravel", "Clay"], correct: 1 },
-            { q: "What is the speed of light in a vacuum (approximate)?", options: ["150,000 km/s", "300,000 km/s", "450,000 km/s", "600,000 km/s"], correct: 1 },
-            { q: "Which organ in the human body consumes the most energy?", options: ["Heart", "Liver", "Brain", "Lungs"], correct: 2 },
-            { q: "What year did World War II officially end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
-            { q: "Which game features 'The Master Chief' as its main protagonist?", options: ["Doom", "Halo", "Gears of War", "Mass Effect"], correct: 1 },
         ];
 
-        // Procedural Question Generator Engine
         function generateProceduralQuestion(id) {
-            const types = ['math', 'science_atomic', 'year_calc'];
-            const type = types[id % types.length];
-
-            if (type === 'math') {
-                const a = Math.floor(Math.random() * 40) + 12;
-                const b = Math.floor(Math.random() * 40) + 12;
-                const ans = a + b;
-                const options = [ans, ans + 3, ans - 4, ans + 10].sort(() => Math.random() - 0.5);
-                return {
-                    q: `Quick Math: What is ${a} + ${b}?`,
-                    options: options.map(String),
-                    correct: options.indexOf(ans)
-                };
-            } else if (type === 'science_atomic') {
-                const elements = [
-                    { name: "Carbon", num: 6 },
-                    { name: "Oxygen", num: 8 },
-                    { name: "Nitrogen", num: 7 },
-                    { name: "Gold", num: 79 },
-                    { name: "Silver", num: 47 }
-                ];
-                const el = elements[Math.floor(Math.random() * elements.length)];
-                const options = [el.num, el.num + 2, Math.max(1, el.num - 3), el.num + 5].sort(() => Math.random() - 0.5);
-                return {
-                    q: `What is the atomic number of ${el.name}?`,
-                    options: options.map(String),
-                    correct: options.indexOf(el.num)
-                };
-            } else {
-                const diff = Math.floor(Math.random() * 15) + 5;
-                const baseYear = 2026;
-                const target = baseYear - diff;
-                const options = [target, target + 2, target - 3, target + 5].sort(() => Math.random() - 0.5);
-                return {
-                    q: `Which year was exactly ${diff} years ago from 2026?`,
-                    options: options.map(String),
-                    correct: options.indexOf(target)
-                };
-            }
+            const a = Math.floor(Math.random() * 40) + 12;
+            const b = Math.floor(Math.random() * 40) + 12;
+            const ans = a + b;
+            const options = [ans, ans + 3, ans - 4, ans + 10].sort(() => Math.random() - 0.5);
+            return {
+                q: `Quick Math: What is ${a} + ${b}?`,
+                options: options.map(String),
+                correct: options.indexOf(ans)
+            };
         }
 
-        function generate20MatchQuestions() {
-            const shuffledAuthored = [...AUTHORED_QUESTIONS].sort(() => Math.random() - 0.5);
-            const pool = [...shuffledAuthored];
-            let proceduralId = 1;
-            while (pool.length < 20) {
-                pool.push(generateProceduralQuestion(proceduralId++));
-            }
+        function generateLocal20Questions() {
+            const pool = [...AUTHORED_QUESTIONS].sort(() => Math.random() - 0.5);
+            let pId = 1;
+            while (pool.length < 20) pool.push(generateProceduralQuestion(pId++));
             return pool.slice(0, 20);
         }
 
@@ -330,7 +329,7 @@
         }
 
         // --- SOLO PRACTICE MODE ---
-        function startSoloGame(mode) {
+        async function startSoloGame(mode) {
             if (!getUsername()) return;
             isSolo = true;
             isHost = false;
@@ -338,7 +337,9 @@
             isEliminated = false;
             soloCurrentQIndex = 0;
             soloScore = 0;
-            matchQuestions = generate20MatchQuestions();
+            
+            document.getElementById('round-status').innerText = 'Fetching 20 fresh questions...';
+            matchQuestions = await fetch20MatchQuestions();
             
             renderSoloQuestion();
             switchView('view-game');
@@ -447,7 +448,8 @@
             isHost = true;
             gameMode = 'classic';
             isEliminated = false;
-            matchQuestions = generate20MatchQuestions();
+
+            matchQuestions = await fetch20MatchQuestions();
 
             const roomData = {
                 code: code,
