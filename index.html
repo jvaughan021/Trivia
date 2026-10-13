@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trivia Clash - Multiplayer Quiz Battle</title>
+    <title>Trivia Clash - Authorized Multiplayer</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -57,21 +57,21 @@
     <header class="w-full max-w-xl text-center py-3">
         <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Speed + Accuracy Scoring Active</span>
+            <span>Host Authorization Required</span>
         </div>
         <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
             TRIVIA <span class="text-indigo-400">CLASH</span>
         </h1>
-        <p class="text-slate-400 text-xs sm:text-sm mt-1">Multiplayer Pub Quiz • Max 20 Players</p>
+        <p class="text-slate-400 text-xs sm:text-sm mt-1">Multiplayer Pub Quiz Engine</p>
     </header>
 
     <main class="w-full max-w-md my-auto">
 
-        <!-- LOBBY VIEW -->
+        <!-- LOBBY VIEW (STRICTLY MULTIPLAYER) -->
         <section id="view-lobby" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl animate-pop">
             <div class="text-center mb-6">
-                <h2 class="text-xl font-bold text-white">Choose Your Game Mode</h2>
-                <p class="text-slate-400 text-xs mt-1">Play solo or challenge up to 20 friends!</p>
+                <h2 class="text-xl font-bold text-white">Enter Multiplayer Game</h2>
+                <p class="text-slate-400 text-xs mt-1">Enter your nickname to join an authorized match</p>
             </div>
 
             <div class="space-y-4 mb-6">
@@ -79,44 +79,22 @@
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Your Nickname</label>
                     <input type="text" id="username-input" placeholder="Enter your name" maxlength="12" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-3 text-white placeholder-slate-600 font-semibold outline-none transition">
                 </div>
-
-                <!-- Solo Question Count Selector -->
-                <div>
-                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Solo Match Length</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button id="solo-q-5" onclick="window.setSoloQuestionCount(5)" class="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">5 Qs</button>
-                        <button id="solo-q-10" onclick="window.setSoloQuestionCount(10)" class="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">10 Qs</button>
-                        <button id="solo-q-20" onclick="window.setSoloQuestionCount(20)" class="py-2 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">20 Qs</button>
-                    </div>
-                </div>
             </div>
 
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="window.startSoloGame('classic')" class="py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/25 transition text-xs flex flex-col items-center justify-center gap-1">
-                        <span>🎮 Play Solo</span>
-                        <span class="text-[10px] text-emerald-200 font-normal">(Classic)</span>
-                    </button>
-
-                    <button onclick="window.startSoloGame('suddendeath')" class="py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold rounded-2xl shadow-lg shadow-rose-600/25 transition text-xs flex flex-col items-center justify-center gap-1">
-                        <span>💀 Sudden Death</span>
-                        <span class="text-[10px] text-rose-200 font-normal">(1 Miss = Out)</span>
-                    </button>
-                </div>
+            <div class="space-y-4">
+                <button onclick="window.createRoom()" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 text-sm">
+                    ⚡ Create Game Room (Host Passcode)
+                </button>
 
                 <div class="relative flex py-1 items-center">
                     <div class="flex-grow border-t border-slate-800"></div>
-                    <span class="flex-shrink mx-4 text-slate-500 text-[10px] uppercase tracking-widest font-semibold">or multiplayer</span>
+                    <span class="flex-shrink mx-4 text-slate-500 text-[10px] uppercase tracking-widest font-semibold">or join existing room</span>
                     <div class="flex-grow border-t border-slate-800"></div>
                 </div>
 
-                <button onclick="window.createRoom()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2">
-                    ⚡ Create Game Room (Max 20 Players)
-                </button>
-
-                <div class="space-y-2 pt-1">
-                    <input type="text" id="room-code-input" placeholder="Room Code (e.g. A9B2)" maxlength="4" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-2.5 text-center text-white placeholder-slate-600 font-mono text-base tracking-widest uppercase outline-none transition">
-                    <button onclick="window.joinRoom()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white font-bold rounded-2xl border border-slate-700 transition text-sm">
+                <div class="space-y-2">
+                    <input type="text" id="room-code-input" placeholder="Room Code (e.g. A9B2)" maxlength="4" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-3 text-center text-white placeholder-slate-600 font-mono text-base tracking-widest uppercase outline-none transition">
+                    <button onclick="window.joinRoom()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white font-bold rounded-2xl border border-slate-700 transition text-sm">
                         🔗 Join Room
                     </button>
                 </div>
@@ -211,7 +189,7 @@
             <p id="leaderboard-subtitle" class="text-slate-400 text-xs mb-6">Top 5 Leaders</p>
 
             <div id="leaderboard-list" class="space-y-2.5 mb-6 text-left">
-                <!-- Ranked players list (Top 5) -->
+                <!-- Ranked players list -->
             </div>
 
             <div id="next-round-controls" class="hidden">
@@ -238,6 +216,8 @@
     </footer>
 
     <script>
+        const MASTER_HOST_PASSCODE = "1428";
+
         const firebaseConfig = {
             apiKey: "AIzaSyC_F885qJNZ8zqs_FeIFpdQUutwfI2PTtQ",
             authDomain: "trivia-e7016.firebaseapp.com",
@@ -265,10 +245,8 @@
         let myName = '';
         let currentRoomCode = null;
         let isHost = false;
-        let isSolo = false;
         let gameMode = 'classic';
         let targetQuestionCount = 20;
-        let soloQuestionCount = 20;
         let isEliminated = false;
         let unsubscribeRoom = null;
         let unsubscribePlayers = null;
@@ -276,9 +254,6 @@
         let hasAnswered = false;
         let currentQuestionTimeLeft = 5.0;
 
-        let soloCurrentQIndex = 0;
-        let soloScore = 0;
-        let soloCorrectCount = 0;
         let matchQuestions = [];
         let livePlayersCache = {};
 
@@ -295,7 +270,6 @@
             let seen = getSeenQuestions();
             if (!seen.includes(questionText)) {
                 seen.push(questionText);
-                // Cap history at 300 questions (15 full 20-question matches with 0 repeats)
                 if (seen.length > 300) seen.shift();
                 localStorage.setItem('trivia_seen_questions', JSON.stringify(seen));
             }
@@ -307,12 +281,9 @@
             return txt.value;
         }
 
-        // --- DYNAMIC FETCH WITH 300-QUESTION DUPLICATE FILTERING ---
         async function fetchMatchQuestions(amount = 20, retries = 3) {
             const seenQuestions = getSeenQuestions();
             let uniqueQuestions = [];
-
-            // Request a larger batch (amount + 10) to account for filtered duplicates
             const requestAmount = Math.min(amount + 10, 50);
 
             for (let attempt = 0; attempt < retries; attempt++) {
@@ -331,7 +302,6 @@
                         for (let item of data.results) {
                             const formattedQ = decodeHTML(item.question);
 
-                            // SKIP if seen in the last 300 questions!
                             if (seenQuestions.includes(formattedQ)) continue;
 
                             const correct = decodeHTML(item.correct_answer);
@@ -359,7 +329,6 @@
                 }
             }
 
-            // Fill remaining slots if API was exhausted or rate-limited
             while (uniqueQuestions.length < amount) {
                 const fallbackQ = generateProceduralQuestion(uniqueQuestions.length + 1);
                 uniqueQuestions.push(fallbackQ);
@@ -367,19 +336,6 @@
 
             return uniqueQuestions.slice(0, amount);
         }
-
-        const AUTHORED_QUESTIONS = [
-            { q: "Which game holds the record for best-selling video game of all time?", options: ["Minecraft", "Tetris", "GTA V", "Wii Sports"], correct: 0 },
-            { q: "What does 'TARDIS' stand for in Doctor Who?", options: ["Time And Relative Dimension In Space", "Time And Relativistic Distance In Space", "Travel And Relative Dimension In Space", "Time And Relative Displacement In Space"], correct: 0 },
-            { q: "Which framework is widely used for building JS bots in Minecraft?", options: ["Mineflayer", "Phaser", "Three.js", "Socket.io"], correct: 0 },
-            { q: "What element does 'H' stand for on the periodic table?", options: ["Helium", "Hydrogen", "Holmium", "Hassium"], correct: 1 },
-            { q: "In what year was the original iPhone released?", options: ["2005", "2007", "2009", "2010"], correct: 1 },
-            { q: "Which planet is known as the Red Planet?", options: ["Venus", "Jupiter", "Mars", "Saturn"], correct: 2 },
-            { q: "What is the capital city of Scotland?", options: ["Glasgow", "Dundee", "Aberdeen", "Edinburgh"], correct: 3 },
-            { q: "How many bones are in the adult human body?", options: ["186", "206", "216", "226"], correct: 1 },
-            { q: "Who directed the sci-fi movie 'Inception'?", options: ["Steven Spielberg", "Christopher Nolan", "Quentin Tarantino", "James Cameron"], correct: 1 },
-            { q: "Which language is considered the native scripting language of web browsers?", options: ["Python", "C++", "JavaScript", "Java"], correct: 2 },
-        ];
 
         function generateProceduralQuestion(id) {
             const a = Math.floor(Math.random() * 40) + 12;
@@ -424,152 +380,8 @@
             return input;
         }
 
-        // --- SOLO PRACTICE MODE ---
-        function setSoloQuestionCount(count) {
-            soloQuestionCount = count;
-            [5, 10, 20].forEach(cnt => {
-                const btn = document.getElementById(`solo-q-${cnt}`);
-                if (btn) {
-                    btn.className = soloQuestionCount === cnt
-                        ? 'py-2 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
-                        : 'py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-                }
-            });
-        }
-        window.setSoloQuestionCount = setSoloQuestionCount;
-
-        async function startSoloGame(mode) {
-            if (!getUsername()) return;
-            isSolo = true;
-            isHost = false;
-            gameMode = mode;
-            targetQuestionCount = soloQuestionCount;
-            isEliminated = false;
-            soloCurrentQIndex = 0;
-            soloScore = 0;
-            soloCorrectCount = 0;
-            
-            document.getElementById('round-status').innerText = 'Filtering 300-question memory...';
-            matchQuestions = await fetchMatchQuestions(targetQuestionCount);
-            
-            renderSoloQuestion();
-            switchView('view-game');
-        }
-
-        function renderSoloQuestion() {
-            hasAnswered = false;
-            const q = matchQuestions[soloCurrentQIndex];
-
-            document.getElementById('q-progress').innerText = `Question ${soloCurrentQIndex + 1} / ${targetQuestionCount} ${gameMode === 'suddendeath' ? '💀' : ''}`;
-            document.getElementById('q-text').innerText = q ? q.q : 'Loading...';
-
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
-
-            if (isEliminated) {
-                document.getElementById('round-status').innerText = '💀 You are ELIMINATED! Spectating...';
-                startTimer(5, () => {
-                    renderSoloLeaderboard();
-                    switchView('view-leaderboard');
-                });
-                return;
-            }
-
-            if (q) {
-                q.options.forEach((optText, i) => {
-                    const btn = document.createElement('button');
-                    btn.id = `opt-btn-${i}`;
-                    btn.onclick = () => submitSoloAnswer(i);
-                    btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-200 transition';
-                    btn.innerText = `${['A', 'B', 'C', 'D'][i]}. ${optText}`;
-                    container.appendChild(btn);
-                });
-            }
-
-            startTimer(5, () => {
-                if (!hasAnswered) submitSoloAnswer(-1);
-            });
-        }
-
-        function submitSoloAnswer(optionIndex) {
-            if (hasAnswered) return;
-            hasAnswered = true;
-            clearInterval(timerInterval);
-
-            const q = matchQuestions[soloCurrentQIndex];
-            const isCorrect = q && optionIndex === q.correct;
-            const speedBonus = isCorrect ? Math.round(currentQuestionTimeLeft * 100) : 0;
-            const roundPoints = isCorrect ? (1000 + speedBonus) : 0;
-
-            if (isCorrect) {
-                soloScore += roundPoints;
-                soloCorrectCount += 1;
-            } else if (gameMode === 'suddendeath') {
-                isEliminated = true;
-            }
-
-            for (let i = 0; i < 4; i++) {
-                const btn = document.getElementById(`opt-btn-${i}`);
-                if (btn) btn.disabled = true;
-            }
-
-            if (optionIndex >= 0) {
-                const selectedBtn = document.getElementById(`opt-btn-${optionIndex}`);
-                if (selectedBtn) {
-                    selectedBtn.className += isCorrect ? ' bg-emerald-950/80 border-emerald-500 text-emerald-300' : ' bg-rose-950/80 border-rose-500 text-rose-300';
-                }
-            }
-
-            document.getElementById('round-status').innerText = isCorrect 
-                ? `Correct! +${roundPoints} pts` 
-                : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
-
-            document.getElementById('sticky-my-rank').innerText = '#1';
-            document.getElementById('sticky-total-players').innerText = '1';
-            document.getElementById('sticky-my-score').innerText = `${soloScore} pts`;
-
-            setTimeout(() => {
-                renderSoloLeaderboard();
-                switchView('view-leaderboard');
-            }, 1200);
-        }
-
-        function renderSoloLeaderboard() {
-            const isFinished = soloCurrentQIndex >= (targetQuestionCount - 1) || (gameMode === 'suddendeath' && isEliminated);
-            document.getElementById('leaderboard-icon').innerText = isEliminated ? '💀' : (isFinished ? '🏆' : '📊');
-            document.getElementById('leaderboard-title').innerText = isEliminated ? 'Eliminated!' : (isFinished ? 'Solo Victory!' : 'Current Standings');
-            document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Match Completed' : `After Question ${soloCurrentQIndex + 1}`;
-
-            const listEl = document.getElementById('leaderboard-list');
-            listEl.innerHTML = `
-                <div class="px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center text-xs font-bold">
-                    <div class="flex items-center gap-2">
-                        <span>${isEliminated ? '💀' : '🥇'}</span>
-                        <span class="text-white">${myName} (Solo)</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-indigo-400 font-mono text-sm font-black block">${soloScore} pts</span>
-                        <span class="text-[10px] text-slate-500">${soloCorrectCount} / ${soloCurrentQIndex + 1} Correct</span>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('next-round-controls').classList.remove('hidden');
-            document.getElementById('next-btn').innerText = isFinished ? '🎮 Play Again' : 'Next Question ➡️';
-            document.getElementById('waiting-next-msg').classList.add('hidden');
-        }
-
         function nextQuestion() {
-            if (isSolo) {
-                const isFinished = soloCurrentQIndex >= (targetQuestionCount - 1) || (gameMode === 'suddendeath' && isEliminated);
-                if (isFinished) {
-                    switchView('view-lobby');
-                    return;
-                }
-                soloCurrentQIndex++;
-                renderSoloQuestion();
-                switchView('view-game');
-            } else if (isHost) {
+            if (isHost) {
                 db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
                     if (!doc.exists) return;
                     const data = doc.data();
@@ -594,12 +406,17 @@
             }
         }
 
-        // --- MULTIPLAYER CODE ---
+        // --- MULTIPLAYER CODE WITH PASSCODE & HOST GATE ---
         async function createRoom() {
             if (!getUsername()) return;
             if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
-            
-            isSolo = false;
+
+            const pass = prompt("Enter Master Host Passcode to create a game room:");
+            if (pass !== MASTER_HOST_PASSCODE) {
+                alert("❌ Incorrect Passcode! Room creation blocked.");
+                return;
+            }
+
             const code = generateCode();
             currentRoomCode = code;
             isHost = true;
@@ -612,6 +429,7 @@
             const roomData = {
                 code: code,
                 hostId: userId,
+                hostName: myName,
                 status: 'waiting',
                 mode: 'classic',
                 qCount: 20,
@@ -628,6 +446,7 @@
                 correctCount: 0,
                 answer: null,
                 eliminated: false,
+                isHost: true,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -655,7 +474,6 @@
             if (!getUsername()) return;
             if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
 
-            isSolo = false;
             isEliminated = false;
             const code = document.getElementById('room-code-input').value.trim().toUpperCase();
             if (code.length !== 4) {
@@ -670,7 +488,20 @@
             const data = docSnap.data();
             if (data.status !== 'waiting') { alert('Game already in progress!'); return; }
 
+            // GATEKEEPER CHECK: Ensure the Authorized Host is connected to this room
             const playersSnap = await roomRef.collection('players').get();
+            let hostPresent = false;
+            playersSnap.forEach(doc => {
+                if (doc.id === data.hostId || doc.data().isHost) {
+                    hostPresent = true;
+                }
+            });
+
+            if (!hostPresent) {
+                alert(`❌ Room unavailable. The authorized host (${data.hostName || 'Host'}) is not currently in this room.`);
+                return;
+            }
+
             if (playersSnap.size >= 20) {
                 alert('Room is full! Maximum 20 players allowed per match to ensure zero lag.');
                 return;
@@ -685,6 +516,7 @@
                 correctCount: 0,
                 answer: null,
                 eliminated: false,
+                isHost: false,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -751,7 +583,7 @@
                 const p = playersMap[pId];
                 const li = document.createElement('li');
                 li.className = 'px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center text-xs font-semibold';
-                li.innerHTML = `<span>👤 ${p.name}</span> ${pId === userId && isHost ? '<span class="text-amber-400 text-[10px]">HOST</span>' : ''}`;
+                li.innerHTML = `<span>👤 ${p.name}</span> ${p.isHost ? '<span class="text-amber-400 text-[10px] font-bold">HOST</span>' : ''}`;
                 playersList.appendChild(li);
             });
         }
@@ -976,12 +808,10 @@
         // Window bindings
         window.createRoom = createRoom;
         window.joinRoom = joinRoom;
-        window.startSoloGame = startSoloGame;
         window.startGame = startGame;
         window.setRoomMode = setRoomMode;
         window.setQuestionCount = setQuestionCount;
         window.nextQuestion = nextQuestion;
-        window.setSoloQuestionCount = setSoloQuestionCount;
     </script>
 </body>
 </html>
