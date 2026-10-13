@@ -45,7 +45,7 @@
     <header class="w-full max-w-xl text-center py-3">
         <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>10,000+ Question Pool Active</span>
+            <span>Speed + Accuracy Scoring Active</span>
         </div>
         <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
             TRIVIA <span class="text-indigo-400">CLASH</span>
@@ -192,7 +192,7 @@
     </footer>
 
     <script>
-        // Your Firebase Configuration (Integrated)
+        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC_F885qJNZ8zqs_FeIFpdQUutwfI2PTtQ",
             authDomain: "trivia-e7016.firebaseapp.com",
@@ -222,25 +222,26 @@
         let currentRoomCode = null;
         let isHost = false;
         let isSolo = false;
-        let gameMode = 'classic'; // 'classic' or 'suddendeath'
+        let gameMode = 'classic';
         let isEliminated = false;
         let unsubscribeRoom = null;
         let timerInterval = null;
         let hasAnswered = false;
+        let currentQuestionStartTime = 0;
+        let currentQuestionTimeLeft = 5.0;
 
         // Solo game state tracking
         let soloCurrentQIndex = 0;
         let soloScore = 0;
+        let soloCorrectCount = 0;
         let matchQuestions = [];
 
-        // Helper function to decode HTML entities in API questions
         function decodeHTML(html) {
             const txt = document.createElement('textarea');
             txt.innerHTML = html;
             return txt.value;
         }
 
-        // Fetch 20 unique questions from 10,000+ pool API with local fallback
         async function fetch20MatchQuestions() {
             try {
                 const res = await fetch('https://opentdb.com/api.php?amount=20&type=multiple');
@@ -270,7 +271,6 @@
             return generateLocal20Questions();
         }
 
-        // Local Question Engine (Fallback)
         const AUTHORED_QUESTIONS = [
             { q: "Which game holds the record for best-selling video game of all time?", options: ["Minecraft", "Tetris", "GTA V", "Wii Sports"], correct: 0 },
             { q: "What does 'TARDIS' stand for in Doctor Who?", options: ["Time And Relative Dimension In Space", "Time And Relativistic Distance In Space", "Travel And Relative Dimension In Space", "Time And Relative Displacement In Space"], correct: 0 },
@@ -336,6 +336,7 @@
             isEliminated = false;
             soloCurrentQIndex = 0;
             soloScore = 0;
+            soloCorrectCount = 0;
             
             document.getElementById('round-status').innerText = 'Fetching 20 fresh questions...';
             matchQuestions = await fetch20MatchQuestions();
@@ -387,7 +388,9 @@
             const isCorrect = optionIndex === q.correct;
 
             if (isCorrect) {
-                soloScore += 1;
+                const speedBonus = Math.round(currentQuestionTimeLeft * 100); // Up to 500 bonus pts
+                soloScore += (1000 + speedBonus);
+                soloCorrectCount += 1;
             } else if (gameMode === 'suddendeath') {
                 isEliminated = true;
             }
@@ -405,7 +408,7 @@
             }
 
             document.getElementById('round-status').innerText = isCorrect 
-                ? 'Correct! +1 pt' 
+                ? `Correct! +${1000 + Math.round(currentQuestionTimeLeft * 100)} pts` 
                 : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
 
             setTimeout(() => {
@@ -427,7 +430,10 @@
                         <span>${isEliminated ? '💀' : '🥇'}</span>
                         <span class="text-white">${myName} (Solo)</span>
                     </div>
-                    <span class="text-indigo-400 font-mono">${soloScore} / ${soloCurrentQIndex + 1} pts</span>
+                    <div class="text-right">
+                        <span class="text-indigo-400 font-mono text-sm font-black block">${soloScore} pts</span>
+                        <span class="text-[10px] text-slate-500">${soloCorrectCount} / ${soloCurrentQIndex + 1} Correct</span>
+                    </div>
                 </div>
             `;
 
@@ -458,7 +464,7 @@
                 currentQIndex: 0,
                 questions: matchQuestions,
                 players: {
-                    [userId]: { name: myName, score: 0, answer: null, eliminated: false }
+                    [userId]: { name: myName, score: 0, correctCount: 0, answer: null, eliminated: false }
                 },
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -498,7 +504,7 @@
             isHost = false;
 
             const updateObj = {};
-            updateObj[`players.${userId}`] = { name: myName, score: 0, answer: null, eliminated: false };
+            updateObj[`players.${userId}`] = { name: myName, score: 0, correctCount: 0, answer: null, eliminated: false };
             await ref.update(updateObj);
 
             listenToRoom(code);
@@ -511,7 +517,6 @@
                 if (!doc.exists) return;
                 const data = doc.data();
                 
-                // HOST LOGIC: Check if ALL players have answered or been eliminated to trigger Leaderboard early
                 if (isHost && data.status === 'playing') {
                     checkIfAllPlayersAnswered(data);
                 }
@@ -623,7 +628,6 @@
                     container.appendChild(btn);
                 });
 
-                // Start 5-second timer. If time expires, trigger timeout submission and push host to leaderboard
                 startTimer(5, async () => {
                     if (!hasAnswered && !isEliminated) {
                         await submitMultiplayerAnswer(-1, qIndex);
@@ -638,6 +642,7 @@
         function startTimer(seconds, onComplete) {
             clearInterval(timerInterval);
             let timeLeft = seconds;
+            currentQuestionTimeLeft = seconds;
             const timerEl = document.getElementById('q-timer');
             timerEl.innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
 
@@ -645,6 +650,7 @@
             timerInterval = setInterval(() => {
                 const elapsed = (Date.now() - startTime) / 1000;
                 timeLeft = Math.max(0, seconds - elapsed);
+                currentQuestionTimeLeft = timeLeft;
                 timerEl.innerText = `⏱️ ${timeLeft.toFixed(1)}s`;
 
                 if (timeLeft <= 0) {
@@ -674,16 +680,21 @@
                 }
             }
 
+            const pointsEarned = isCorrect ? (1000 + Math.round(currentQuestionTimeLeft * 100)) : 0;
+
             document.getElementById('round-status').innerText = isCorrect 
-                ? 'Correct! +1 pt' 
+                ? `Correct! +${pointsEarned} pts` 
                 : (gameMode === 'suddendeath' ? '💀 WRONG! You are ELIMINATED!' : 'Wrong Answer! 0 pts');
 
             const roomRef = db.collection('trivia_rooms').doc(currentRoomCode);
             const doc = await roomRef.get();
-            const currentScore = doc.data().players[userId]?.score || 0;
+            const playerData = doc.data().players[userId] || {};
+            const currentScore = playerData.score || 0;
+            const currentCorrectCount = playerData.correctCount || 0;
 
             const updateObj = {};
-            updateObj[`players.${userId}.score`] = currentScore + (isCorrect ? 1 : 0);
+            updateObj[`players.${userId}.score`] = currentScore + pointsEarned;
+            updateObj[`players.${userId}.correctCount`] = currentCorrectCount + (isCorrect ? 1 : 0);
             updateObj[`players.${userId}.answer`] = optionIndex;
             if (willBeEliminated) updateObj[`players.${userId}.eliminated`] = true;
 
@@ -696,9 +707,10 @@
 
             document.getElementById('leaderboard-icon').innerText = isFinished ? '🏆' : '📊';
             document.getElementById('leaderboard-title').innerText = isFinished ? 'Final Victory!' : 'Live Standings';
-            document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Game Over - Final Scores' : `After Question ${data.currentQIndex + 1}`;
+            document.getElementById('leaderboard-subtitle').innerText = isFinished ? 'Game Over - Final Ranks' : `After Question ${data.currentQIndex + 1}`;
 
-            const playersArr = Object.values(data.players || {}).sort((a, b) => b.score - a.score);
+            // Sort by Total Points (Accuracy + Speed)
+            const playersArr = Object.values(data.players || {}).sort((a, b) => (b.score || 0) - (a.score || 0));
             const listEl = document.getElementById('leaderboard-list');
             listEl.innerHTML = '';
 
@@ -713,7 +725,10 @@
                         <span>${p.eliminated ? '💀' : rankLabel}</span>
                         <span class="${p.eliminated ? 'text-rose-400 line-through' : 'text-white'}">${p.name}</span>
                     </div>
-                    <span class="text-indigo-400 font-mono">${p.score} pts</span>
+                    <div class="text-right">
+                        <span class="text-indigo-400 font-mono text-sm font-black block">${p.score || 0} pts</span>
+                        <span class="text-[10px] text-slate-500">${p.correctCount || 0} Correct</span>
+                    </div>
                 `;
                 listEl.appendChild(div);
             });
@@ -748,7 +763,6 @@
             const doc = await roomRef.get();
             const data = doc.data();
 
-            // Reset answer states for the next round
             const updatedPlayers = { ...data.players };
             Object.keys(updatedPlayers).forEach(pId => {
                 updatedPlayers[pId].answer = null;
