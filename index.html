@@ -756,7 +756,6 @@
 
             if (timerInterval) clearInterval(timerInterval);
             
-            // Timestamp sync so Uncle, Auntie, and everyone start at the exact same fraction of a second
             const startTime = roomData.questionStartTime ? roomData.questionStartTime.toMillis() : Date.now();
 
             timerInterval = setInterval(() => {
@@ -844,11 +843,16 @@
             players.forEach((p, idx) => {
                 if (p.id === userId) myRank = idx + 1;
                 if (idx < 5) {
+                    let rankDisplay = `#${idx + 1}`;
+                    if (idx === 0) rankDisplay = '🥇';
+                    else if (idx === 1) rankDisplay = '🥈';
+                    else if (idx === 2) rankDisplay = '🥉';
+
                     const div = document.createElement('div');
                     div.className = `p-3 rounded-2xl border flex justify-between items-center text-xs font-semibold ${p.id === userId ? 'bg-indigo-950/50 border-indigo-500' : 'bg-slate-950 border-slate-800'}`;
                     div.innerHTML = `
                         <div class="flex items-center gap-2">
-                            <span class="font-mono text-indigo-400">#${idx + 1}</span>
+                            <span class="font-mono text-indigo-400 w-6 text-center">${rankDisplay}</span>
                             <span class="text-white">${p.name} ${p.eliminated ? '💀' : ''}</span>
                         </div>
                         <span class="font-bold text-emerald-400">${p.score} pts</span>
