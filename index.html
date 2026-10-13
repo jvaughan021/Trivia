@@ -80,6 +80,10 @@
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Your Nickname</label>
                     <input type="text" id="username-input" placeholder="Enter your name" maxlength="12" class="w-full bg-slate-950/60 border border-slate-800 focus:border-indigo-500 rounded-2xl px-4 py-3 text-white placeholder-slate-600 font-semibold outline-none transition">
                 </div>
+                <div class="flex items-center gap-2 pt-1 text-xs font-semibold text-slate-300">
+                    <input type="checkbox" id="host-plays-checkbox" checked class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <label for="host-plays-checkbox" class="cursor-pointer">Participate as a player in this match</label>
+                </div>
             </div>
 
             <div class="space-y-4">
@@ -358,7 +362,11 @@
 
             const stickyBar = document.getElementById('sticky-user-rank-bar');
             if (viewId === 'view-game' || viewId === 'view-leaderboard') {
-                stickyBar.classList.remove('hidden');
+                if (isHost && !livePlayersCache[userId]) {
+                    stickyBar.classList.add('hidden'); // Spectating host doesn't need rank bar
+                } else {
+                    stickyBar.classList.remove('hidden');
+                }
             } else {
                 stickyBar.classList.add('hidden');
             }
@@ -412,12 +420,9 @@
             if (!getUsername()) return;
             if (!db || !auth) { alert("Firebase is initializing, please try again in a second!"); return; }
 
-            // Force sign-out so it always asks for email/password and clears cached sessions
             try {
                 await auth.signOut();
-            } catch (e) {
-                // Ignore if already signed out
-            }
+            } catch (e) {}
 
             let user = null;
             const email = prompt("Enter Host Email:");
@@ -456,15 +461,20 @@
 
             await db.collection('trivia_rooms').doc(code).set(roomData);
 
-            await db.collection('trivia_rooms').doc(code).collection('players').doc(userId).set({
-                name: myName,
-                score: 0,
-                correctCount: 0,
-                answer: null,
-                eliminated: false,
-                isHost: true,
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            // Check if the host wants to participate as a player or purely spectate/manage
+            const hostWantsToPlay = document.getElementById('host-plays-checkbox')?.checked ?? true;
+
+            if (hostWantsToPlay) {
+                await db.collection('trivia_rooms').doc(code).collection('players').doc(userId).set({
+                    name: myName,
+                    score: 0,
+                    correctCount: 0,
+                    answer: null,
+                    eliminated: false,
+                    isHost: true,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
 
             listenToRoom(code);
         }
@@ -474,10 +484,8 @@
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
             
-            // Instantly refresh local UI buttons without waiting
             renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
 
-            // Sync to Firebase in the background
             db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
         }
 
@@ -485,10 +493,8 @@
             if (!isHost || !currentRoomCode) return;
             targetQuestionCount = count;
 
-            // Instantly refresh local UI buttons immediately
             renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
 
-            // Fetch questions and sync to Firebase in the background asynchronously
             fetchMatchQuestions(count).then(questions => {
                 matchQuestions = questions;
                 return db.collection('trivia_rooms').doc(currentRoomCode).update({
@@ -652,6 +658,7 @@
 
         async function checkIfAllPlayersAnswered(playersMap) {
             const players = Object.values(playersMap);
+            if (players.length === 0) return;
             const activePlayers = players.filter(p => !p.eliminated);
             const allAnswered = activePlayers.every(p => p.answer !== null);
 
@@ -683,6 +690,13 @@
 
                 const container = document.getElementById('options-container');
                 container.innerHTML = '';
+
+                // If host is purely spectating and not in playersMap
+                if (isHost && !livePlayersCache[userId]) {
+                    document.getElementById('round-status').innerText = '👁️ Spectating match as Host...';
+                    startTimer(5, null);
+                    return;
+                }
 
                 if (isEliminated) {
                     document.getElementById('round-status').innerText = '💀 You are ELIMINATED! Spectating match...';
@@ -724,7 +738,7 @@
 
                 if (remaining <= 0) {
                     clearInterval(timerInterval);
-                    if (!hasAnswered && !isEliminated && qIndex !== null) {
+                    if (!hasAnswered && !isEliminated && qIndex !== null && !(isHost && !livePlayersCache[userId])) {
                         submitMultiplayerAnswer(-1, qIndex); // Time out
                     }
                 }
@@ -739,7 +753,6 @@
             const isCorrect = (optionIndex === q.correct);
             const responseTimeMs = Math.max(0, (5.0 - currentQuestionTimeLeft) * 1000);
 
-            // Highlight buttons locally
             q.options.forEach((_, i) => {
                 const btn = document.getElementById(`opt-btn-${i}`);
                 if (btn) {
@@ -763,7 +776,6 @@
                 statusEl.className = 'text-center text-xs font-bold text-rose-400 h-5';
             }
 
-            // Calculate score if correct
             const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
             const doc = await pRef.get();
             if (!doc.exists) return;
@@ -796,7 +808,6 @@
 
             const playersArr = Object.values(playersMap).sort((a, b) => b.score - a.score);
             
-            // Find my rank
             let myRank = '-';
             playersArr.forEach((p, idx) => {
                 if (p.name === myName) myRank = `#${idx + 1}`;
