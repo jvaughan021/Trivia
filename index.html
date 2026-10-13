@@ -407,25 +407,30 @@
             }
         }
 
-        // --- MULTIPLAYER CODE WITH FIREBASE AUTHENTICATION HOST GATE ---
+        // --- MULTIPLAYER CODE WITH FORCED FIREBASE AUTHENTICATION HOST GATE ---
         async function createRoom() {
             if (!getUsername()) return;
             if (!db || !auth) { alert("Firebase is initializing, please try again in a second!"); return; }
 
-            let user = auth.currentUser;
-            if (!user) {
-                const email = prompt("Enter Host Email:");
-                if (!email) return;
-                const password = prompt("Enter Host Password:");
-                if (!password) return;
+            // Force sign-out so it always asks for email/password and clears cached sessions
+            try {
+                await auth.signOut();
+            } catch (e) {
+                // Ignore if already signed out
+            }
 
-                try {
-                    const cred = await auth.signInWithEmailAndPassword(email, password);
-                    user = cred.user;
-                } catch (err) {
-                    alert("❌ Authentication failed: " + err.message);
-                    return;
-                }
+            let user = null;
+            const email = prompt("Enter Host Email:");
+            if (!email) return;
+            const password = prompt("Enter Host Password:");
+            if (!password) return;
+
+            try {
+                const cred = await auth.signInWithEmailAndPassword(email, password);
+                user = cred.user;
+            } catch (err) {
+                alert("❌ Authentication failed: " + err.message);
+                return;
             }
 
             const code = generateCode();
