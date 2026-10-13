@@ -267,7 +267,6 @@
                 console.warn("API offline, falling back to local question generator engine.", err);
             }
 
-            // Fallback: Local Generator Engine
             return generateLocal20Questions();
         }
 
@@ -510,8 +509,25 @@
 
             unsubscribeRoom = db.collection('trivia_rooms').doc(code).onSnapshot((doc) => {
                 if (!doc.exists) return;
-                updateUIState(doc.data());
+                const data = doc.data();
+                
+                // HOST LOGIC: Check if ALL players have answered or been eliminated to trigger Leaderboard early
+                if (isHost && data.status === 'playing') {
+                    checkIfAllPlayersAnswered(data);
+                }
+
+                updateUIState(data);
             });
+        }
+
+        async function checkIfAllPlayersAnswered(data) {
+            const players = Object.values(data.players || {});
+            const activePlayers = players.filter(p => !p.eliminated);
+            const allAnswered = activePlayers.every(p => p.answer !== null);
+
+            if (allAnswered && activePlayers.length > 0) {
+                await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
+            }
         }
 
         function updateUIState(data) {
@@ -607,8 +623,14 @@
                     container.appendChild(btn);
                 });
 
-                startTimer(5, () => {
-                    if (!hasAnswered && !isEliminated) submitMultiplayerAnswer(-1, qIndex);
+                // Start 5-second timer. If time expires, trigger timeout submission and push host to leaderboard
+                startTimer(5, async () => {
+                    if (!hasAnswered && !isEliminated) {
+                        await submitMultiplayerAnswer(-1, qIndex);
+                    }
+                    if (isHost) {
+                        await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
+                    }
                 });
             }
         }
@@ -635,7 +657,6 @@
         async function submitMultiplayerAnswer(optionIndex, qIndex) {
             if (hasAnswered || isEliminated) return;
             hasAnswered = true;
-            clearInterval(timerInterval);
 
             const q = matchQuestions[qIndex];
             const isCorrect = optionIndex === q.correct;
@@ -667,12 +688,6 @@
             if (willBeEliminated) updateObj[`players.${userId}.eliminated`] = true;
 
             await roomRef.update(updateObj);
-
-            if (isHost) {
-                setTimeout(async () => {
-                    await roomRef.update({ status: 'leaderboard' });
-                }, 1500);
-            }
         }
 
         function renderMultiplayerLeaderboard(data) {
@@ -733,11 +748,18 @@
             const doc = await roomRef.get();
             const data = doc.data();
 
+            // Reset answer states for the next round
+            const updatedPlayers = { ...data.players };
+            Object.keys(updatedPlayers).forEach(pId => {
+                updatedPlayers[pId].answer = null;
+            });
+
             const nextIndex = data.currentQIndex + 1;
             if (nextIndex < 20) {
                 await roomRef.update({
                     status: 'playing',
-                    currentQIndex: nextIndex
+                    currentQIndex: nextIndex,
+                    players: updatedPlayers
                 });
             } else {
                 await roomRef.update({ status: 'finished' });
