@@ -121,7 +121,7 @@
             <!-- Host Mode, Participation, Timer, Difficulty & Question Count Controls -->
             <div id="host-mode-selection" class="mb-6 text-left hidden space-y-4">
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
-                    <input type="checkbox" id="host-plays-checkbox" checked class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
+                    <input type="checkbox" id="host-plays-checkbox" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
                     <label for="host-plays-checkbox" class="cursor-pointer">Participate as a player in this match</label>
                 </div>
 
@@ -277,6 +277,7 @@
         let targetDifficulty = 'medium';
         let targetQuestionCount = 20;
         let targetQuestionTimer = 15;
+        let hostPlays = false;
         let isEliminated = false;
         let unsubscribeRoom = null;
         let unsubscribePlayers = null;
@@ -468,6 +469,7 @@
             targetDifficulty = 'medium';
             targetQuestionCount = 20;
             targetQuestionTimer = 15;
+            hostPlays = false;
             isEliminated = false;
 
             matchQuestions = await fetchMatchQuestions(20, 'medium');
@@ -476,6 +478,8 @@
                 code: code,
                 hostId: user.uid,
                 hostName: myName,
+                isHostConnected: true,
+                hostPlays: false,
                 status: 'waiting',
                 mode: 'classic',
                 difficulty: 'medium',
@@ -489,23 +493,19 @@
 
             await db.collection('trivia_rooms').doc(code).set(roomData);
 
-            await db.collection('trivia_rooms').doc(code).collection('players').doc(userId).set({
-                name: myName,
-                score: 0,
-                correctCount: 0,
-                answer: null,
-                eliminated: false,
-                isHost: true,
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            // By default host is a non-playing moderator sitting in lobby
+            document.getElementById('host-plays-checkbox').checked = false;
 
             listenToRoom(code);
         }
 
         async function toggleHostParticipation(shouldPlay) {
             if (!isHost || !currentRoomCode) return;
+            hostPlays = shouldPlay;
             const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
             
+            await db.collection('trivia_rooms').doc(currentRoomCode).update({ hostPlays: shouldPlay });
+
             if (shouldPlay) {
                 await pRef.set({
                     name: myName,
@@ -581,21 +581,19 @@
             const data = docSnap.data();
             if (data.status !== 'waiting') { alert('Game already in progress!'); return; }
 
-            const playersSnap = await roomRef.collection('players').get();
-            let hostPresent = false;
-            playersSnap.forEach(doc => {
-                if (doc.id === data.hostId || doc.data().isHost) {
-                    hostPresent = true;
-                }
-            });
-
-            if (!hostPresent) {
+            // Fix 1: Check host presence via room metadata (isHostConnected) instead of players array
+            if (!data.isHostConnected) {
                 alert(`❌ Room unavailable. The authorized host (${data.hostName || 'Host'}) is not currently in this room.`);
                 return;
             }
 
-            if (playersSnap.size >= 20) {
-                alert('Room is full! Maximum 20 players allowed per match to ensure zero lag.');
+            const playersSnap = await roomRef.collection('players').get();
+            const currentPlayersCount = playersSnap.size;
+            
+            // Fix 2: If host isn't playing, allow 20 external players. If host is playing, host takes 1 slot.
+            const maxPlayersLimit = 20;
+            if (currentPlayersCount >= maxPlayersLimit) {
+                alert('Room is full! Maximum 20 active players allowed per match.');
                 return;
             }
 
@@ -627,6 +625,7 @@
                 targetDifficulty = data.difficulty || 'medium';
                 targetQuestionCount = data.qCount || 20;
                 targetQuestionTimer = data.qTimer || 15;
+                hostPlays = data.hostPlays || false;
 
                 if (data.status === 'waiting') {
                     renderWaitingRoom(data);
@@ -758,6 +757,11 @@
         }
 
         function renderMultiplayerQuestion(roomData) {
+            if (isHost && !hostPlays) {
+                switchView('view-leaderboard');
+                return;
+            }
+
             if (isEliminated) {
                 switchView('view-leaderboard');
                 return;
