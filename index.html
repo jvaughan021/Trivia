@@ -387,7 +387,7 @@
 
             const stickyBar = document.getElementById('sticky-user-rank-bar');
             if (viewId === 'view-game' || viewId === 'view-leaderboard') {
-                if (isHost && !livePlayersCache[userId]) {
+                if (isHost && !hostPlays) {
                     stickyBar.classList.add('hidden');
                 } else {
                     stickyBar.classList.remove('hidden');
@@ -493,7 +493,6 @@
 
             await db.collection('trivia_rooms').doc(code).set(roomData);
 
-            // By default host is a non-playing moderator sitting in lobby
             document.getElementById('host-plays-checkbox').checked = false;
 
             listenToRoom(code);
@@ -581,7 +580,6 @@
             const data = docSnap.data();
             if (data.status !== 'waiting') { alert('Game already in progress!'); return; }
 
-            // Fix 1: Check host presence via room metadata (isHostConnected) instead of players array
             if (!data.isHostConnected) {
                 alert(`❌ Room unavailable. The authorized host (${data.hostName || 'Host'}) is not currently in this room.`);
                 return;
@@ -590,7 +588,6 @@
             const playersSnap = await roomRef.collection('players').get();
             const currentPlayersCount = playersSnap.size;
             
-            // Fix 2: If host isn't playing, allow 20 external players. If host is playing, host takes 1 slot.
             const maxPlayersLimit = 20;
             if (currentPlayersCount >= maxPlayersLimit) {
                 alert('Room is full! Maximum 20 active players allowed per match.');
@@ -757,11 +754,6 @@
         }
 
         function renderMultiplayerQuestion(roomData) {
-            if (isHost && !hostPlays) {
-                switchView('view-leaderboard');
-                return;
-            }
-
             if (isEliminated) {
                 switchView('view-leaderboard');
                 return;
@@ -778,16 +770,37 @@
 
             document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / ${roomData.questions.length}`;
             document.getElementById('q-text').innerText = qData.q;
-            document.getElementById('round-status').innerText = 'Lock in your answer!';
+
+            const isHostSpectator = isHost && !hostPlays;
+
+            if (isHostSpectator) {
+                document.getElementById('round-status').innerHTML = '<span class="text-amber-400 font-bold">🎙️ Host Spectator Mode (Live Question)</span>';
+            } else {
+                document.getElementById('round-status').innerText = 'Lock in your answer!';
+            }
 
             const optsContainer = document.getElementById('options-container');
             optsContainer.innerHTML = '';
 
             qData.options.forEach((optText, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-2xl text-white font-semibold text-sm text-left transition flex items-center justify-between group';
-                btn.innerHTML = `<span><span class="text-indigo-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
-                btn.onclick = () => submitAnswer(index, qData.correct, false, timeLimit);
+                
+                if (isHostSpectator) {
+                    // Highlight correct answer in green for spectator host
+                    if (index === qData.correct) {
+                        btn.className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+                        btn.innerHTML = `<span><span class="text-emerald-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span> <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-bold">CORRECT</span>`;
+                    } else {
+                        btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 border border-slate-800 rounded-2xl text-slate-400 font-semibold text-sm text-left flex items-center justify-between opacity-60';
+                        btn.innerHTML = `<span><span class="text-slate-500 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
+                    }
+                    btn.disabled = true;
+                } else {
+                    btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-2xl text-white font-semibold text-sm text-left transition flex items-center justify-between group';
+                    btn.innerHTML = `<span><span class="text-indigo-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
+                    btn.onclick = () => submitAnswer(index, qData.correct, false, timeLimit);
+                }
+                
                 optsContainer.appendChild(btn);
             });
 
@@ -807,7 +820,7 @@
 
                 if (currentQuestionTimeLeft <= 0) {
                     clearInterval(timerInterval);
-                    if (!hasAnswered) {
+                    if (!hasAnswered && !isHostSpectator) {
                         submitAnswer(-1, qData.correct, true, timeLimit);
                     }
                 }
