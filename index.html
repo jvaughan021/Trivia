@@ -118,7 +118,7 @@
                 </ul>
             </div>
 
-            <!-- Host Mode, Participation & Question Count Controls -->
+            <!-- Host Mode, Participation, Timer & Question Count Controls -->
             <div id="host-mode-selection" class="mb-6 text-left hidden space-y-4">
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
                     <input type="checkbox" id="host-plays-checkbox" checked class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
@@ -134,6 +134,17 @@
                         <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
                             💀 Sudden Death
                         </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Question Timer:</label>
+                    <div class="grid grid-cols-5 gap-1.5">
+                        <button id="timer-btn-10" onclick="window.setRoomTimer(10)" class="py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">10s</button>
+                        <button id="timer-btn-15" onclick="window.setRoomTimer(15)" class="py-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">15s</button>
+                        <button id="timer-btn-20" onclick="window.setRoomTimer(20)" class="py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">20s</button>
+                        <button id="timer-btn-25" onclick="window.setRoomTimer(25)" class="py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">25s</button>
+                        <button id="timer-btn-30" onclick="window.setRoomTimer(30)" class="py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">30s</button>
                     </div>
                 </div>
 
@@ -155,6 +166,7 @@
 
             <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden">
                 Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span> • 
+                Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span> • 
                 Length: <span id="current-qcount-label" class="text-indigo-400 font-bold">20 Questions</span>
             </div>
 
@@ -172,7 +184,7 @@
         <section id="view-game" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl hidden">
             <div class="flex justify-between items-center bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-2.5 mb-4">
                 <span id="q-progress" class="text-xs font-bold text-indigo-400">Question 1 / 20</span>
-                <span id="q-timer" class="text-sm font-mono font-black text-amber-400 animate-pulse">⏱️ 5.0s</span>
+                <span id="q-timer" class="text-sm font-mono font-black text-amber-400 animate-pulse">⏱️ 15.0s</span>
             </div>
 
             <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 mb-5 text-center min-h-[110px] flex items-center justify-center">
@@ -253,17 +265,17 @@
         let isHost = false;
         let gameMode = 'classic';
         let targetQuestionCount = 20;
+        let targetQuestionTimer = 15;
         let isEliminated = false;
         let unsubscribeRoom = null;
         let unsubscribePlayers = null;
         let timerInterval = null;
         let hasAnswered = false;
-        let currentQuestionTimeLeft = 5.0;
+        let currentQuestionTimeLeft = 15.0;
 
         let matchQuestions = [];
         let livePlayersCache = {};
 
-        // --- PERSISTENT 300-QUESTION HISTORY ENGINE ---
         function getSeenQuestions() {
             try {
                 return JSON.parse(localStorage.getItem('trivia_seen_questions') || '[]');
@@ -390,33 +402,32 @@
             return input;
         }
 
-        function nextQuestion() {
+        async function nextQuestion() {
             if (isHost) {
-                db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
-                    if (!doc.exists) return;
-                    const data = doc.data();
-                    const nextIdx = (data.currentQIndex || 0) + 1;
-                    if (nextIdx >= targetQuestionCount) {
-                        db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'finished' });
-                    } else {
-                        db.collection('trivia_rooms').doc(currentRoomCode).collection('players').get().then(snap => {
-                            const batch = db.batch();
-                            snap.forEach(pDoc => {
-                                batch.update(pDoc.ref, { answer: null, lastResponseTimeMs: 0 });
-                            });
-                            batch.commit();
-                        });
+                const doc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
+                if (!doc.exists) return;
+                const data = doc.data();
+                const nextIdx = (data.currentQIndex || 0) + 1;
+                
+                if (nextIdx >= targetQuestionCount) {
+                    await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'finished' });
+                } else {
+                    const snap = await db.collection('trivia_rooms').doc(currentRoomCode).collection('players').get();
+                    const batch = db.batch();
+                    snap.forEach(pDoc => {
+                        batch.update(pDoc.ref, { answer: null, lastResponseTimeMs: 0 });
+                    });
+                    await batch.commit();
 
-                        db.collection('trivia_rooms').doc(currentRoomCode).update({
-                            status: 'playing',
-                            currentQIndex: nextIdx
-                        });
-                    }
-                });
+                    await db.collection('trivia_rooms').doc(currentRoomCode).update({
+                        status: 'playing',
+                        currentQIndex: nextIdx,
+                        questionStartTime: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
             }
         }
 
-        // --- MULTIPLAYER CODE WITH FORCED FIREBASE AUTHENTICATION HOST GATE ---
         async function createRoom() {
             if (!getUsername()) return;
             if (!db || !auth) { alert("Firebase is initializing, please try again in a second!"); return; }
@@ -444,6 +455,7 @@
             isHost = true;
             gameMode = 'classic';
             targetQuestionCount = 20;
+            targetQuestionTimer = 15;
             isEliminated = false;
 
             matchQuestions = await fetchMatchQuestions(20);
@@ -455,14 +467,15 @@
                 status: 'waiting',
                 mode: 'classic',
                 qCount: 20,
+                qTimer: 15,
                 currentQIndex: 0,
                 questions: matchQuestions,
+                questionStartTime: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await db.collection('trivia_rooms').doc(code).set(roomData);
 
-            // Default host as player in new room
             await db.collection('trivia_rooms').doc(code).collection('players').doc(userId).set({
                 name: myName,
                 score: 0,
@@ -495,21 +508,24 @@
             }
         }
 
-        // --- OPTIMIZED INSTANT UI UPDATES ---
         function setRoomMode(mode) {
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
-            
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
-
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
             db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
+        }
+
+        function setRoomTimer(seconds) {
+            if (!isHost || !currentRoomCode) return;
+            targetQuestionTimer = seconds;
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+            db.collection('trivia_rooms').doc(currentRoomCode).update({ qTimer: seconds }).catch(err => console.error("Timer sync error:", err));
         }
 
         function setQuestionCount(count) {
             if (!isHost || !currentRoomCode) return;
             targetQuestionCount = count;
-
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount });
+            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
 
             fetchMatchQuestions(count).then(questions => {
                 matchQuestions = questions;
@@ -582,6 +598,7 @@
                 matchQuestions = data.questions || [];
                 gameMode = data.mode || 'classic';
                 targetQuestionCount = data.qCount || 20;
+                targetQuestionTimer = data.qTimer || 15;
 
                 if (data.status === 'waiting') {
                     renderWaitingRoom(data);
@@ -653,6 +670,15 @@
                     ? 'py-2.5 px-3 rounded-xl border border-rose-500 bg-rose-950/60 text-white font-bold text-xs transition'
                     : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
 
+                [10, 15, 20, 25, 30].forEach(sec => {
+                    const btn = document.getElementById(`timer-btn-${sec}`);
+                    if (btn) {
+                        btn.className = targetQuestionTimer === sec
+                            ? 'py-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
+                            : 'py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+                    }
+                });
+
                 [5, 10, 20].forEach(cnt => {
                     const btn = document.getElementById(`qcount-btn-${cnt}`);
                     if (btn) {
@@ -667,6 +693,7 @@
                 document.getElementById('guest-mode-info').classList.remove('hidden');
                 document.getElementById('guest-waiting-msg').classList.remove('hidden');
                 document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic' : '💀 Sudden Death';
+                document.getElementById('current-timer-label').innerText = `${targetQuestionTimer}s`;
                 document.getElementById('current-qcount-label').innerText = `${targetQuestionCount} Questions`;
             }
             switchView('view-waiting');
@@ -687,192 +714,188 @@
             if (!isHost) return;
             await db.collection('trivia_rooms').doc(currentRoomCode).update({
                 status: 'playing',
-                currentQIndex: 0
+                currentQIndex: 0,
+                questionStartTime: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
 
-        let currentQIndexRendered = -1;
-
-        function renderMultiplayerQuestion(data) {
-            const qIndex = data.currentQIndex;
-            const q = matchQuestions[qIndex];
-
-            if (currentQIndexRendered !== qIndex) {
-                currentQIndexRendered = qIndex;
-                hasAnswered = false;
-
-                document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / ${targetQuestionCount} ${gameMode === 'suddendeath' ? '💀' : ''}`;
-                document.getElementById('q-text').innerText = q ? q.q : 'Loading...';
-
-                const container = document.getElementById('options-container');
-                container.innerHTML = '';
-
-                if (isHost && !livePlayersCache[userId]) {
-                    document.getElementById('round-status').innerText = '👁️ Spectating match as Host...';
-                    startTimer(5, null);
-                    return;
-                }
-
-                if (isEliminated) {
-                    document.getElementById('round-status').innerText = '💀 You are ELIMINATED! Spectating match...';
-                    startTimer(5, null);
-                    return;
-                }
-
-                document.getElementById('round-status').innerText = 'Lock in your answer!';
-
-                if (q) {
-                    q.options.forEach((optText, i) => {
-                        const btn = document.createElement('button');
-                        btn.id = `opt-btn-${i}`;
-                        btn.onclick = () => submitMultiplayerAnswer(i, qIndex);
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-200 transition';
-                        btn.innerText = `${['A', 'B', 'C', 'D'][i]}. ${optText}`;
-                        container.appendChild(btn);
-                    });
-                }
-
-                startTimer(5, qIndex);
+        function renderMultiplayerQuestion(roomData) {
+            if (isEliminated) {
+                switchView('view-leaderboard');
+                return;
             }
-        }
 
-        function startTimer(seconds, qIndex) {
+            const qIndex = roomData.currentQIndex || 0;
+            const qData = (roomData.questions || [])[qIndex];
+            const timeLimit = roomData.qTimer || 15;
+
+            if (!qData) {
+                switchView('view-leaderboard');
+                return;
+            }
+
+            document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / ${roomData.questions.length}`;
+            document.getElementById('q-text').innerText = qData.q;
+            document.getElementById('round-status').innerText = 'Lock in your answer!';
+
+            const optsContainer = document.getElementById('options-container');
+            optsContainer.innerHTML = '';
+
+            qData.options.forEach((optText, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-2xl text-white font-semibold text-sm text-left transition flex items-center justify-between group';
+                btn.innerHTML = `<span><span class="text-indigo-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
+                btn.onclick = () => submitAnswer(index, qData.correct, false, timeLimit);
+                optsContainer.appendChild(btn);
+            });
+
+            hasAnswered = false;
+            currentQuestionTimeLeft = timeLimit;
+            const timerElem = document.getElementById('q-timer');
+            timerElem.innerText = `⏱️ ${timeLimit.toFixed(1)}s`;
+
             if (timerInterval) clearInterval(timerInterval);
-            currentQuestionTimeLeft = seconds;
-            const timerEl = document.getElementById('q-timer');
-            timerEl.innerText = `⏱️ ${seconds.toFixed(1)}s`;
-
-            const startTime = Date.now();
-            const durationMs = seconds * 1000;
+            
+            // Timestamp sync so Uncle, Auntie, and everyone start at the exact same fraction of a second
+            const startTime = roomData.questionStartTime ? roomData.questionStartTime.toMillis() : Date.now();
 
             timerInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const remaining = Math.max(0, (durationMs - elapsed) / 1000);
-                currentQuestionTimeLeft = remaining;
-                timerEl.innerText = `⏱️ ${remaining.toFixed(1)}s`;
+                const elapsed = (Date.now() - startTime) / 1000;
+                currentQuestionTimeLeft = Math.max(0, timeLimit - elapsed);
+                timerElem.innerText = `⏱️ ${currentQuestionTimeLeft.toFixed(1)}s`;
 
-                if (remaining <= 0) {
+                if (currentQuestionTimeLeft <= 0) {
                     clearInterval(timerInterval);
-                    if (!hasAnswered && !isEliminated && qIndex !== null && !(isHost && !livePlayersCache[userId])) {
-                        submitMultiplayerAnswer(-1, qIndex);
+                    if (!hasAnswered) {
+                        submitAnswer(-1, qData.correct, true, timeLimit);
                     }
                 }
             }, 100);
         }
 
-        async function submitMultiplayerAnswer(optionIndex, qIndex) {
-            if (hasAnswered || isEliminated) return;
+        async function submitAnswer(selectedIndex, correctIndex, isTimeout = false, timeLimit = 15) {
+            if (hasAnswered) return;
             hasAnswered = true;
+            if (timerInterval) clearInterval(timerInterval);
 
-            const q = matchQuestions[qIndex];
-            const isCorrect = (optionIndex === q.correct);
-            const responseTimeMs = Math.max(0, (5.0 - currentQuestionTimeLeft) * 1000);
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.disabled = true);
 
-            q.options.forEach((_, i) => {
-                const btn = document.getElementById(`opt-btn-${i}`);
-                if (btn) {
-                    btn.disabled = true;
-                    if (i === q.correct) {
-                        btn.className = 'w-full py-3.5 px-4 bg-emerald-600 border border-emerald-500 rounded-2xl text-left text-xs font-bold text-white shadow-lg';
-                    } else if (i === optionIndex) {
-                        btn.className = 'w-full py-3.5 px-4 bg-rose-600 border border-rose-500 rounded-2xl text-left text-xs font-bold text-white shadow-lg';
-                    } else {
-                        btn.className = 'w-full py-3.5 px-4 bg-slate-950/40 border border-slate-800 rounded-2xl text-left text-xs font-semibold text-slate-600';
-                    }
-                }
-            });
-
-            const statusEl = document.getElementById('round-status');
-            if (isCorrect) {
-                statusEl.innerText = '✅ Correct! Waiting for others...';
-                statusEl.className = 'text-center text-xs font-bold text-emerald-400 h-5';
-            } else {
-                statusEl.innerText = optionIndex === -1 ? '⏰ Time out!' : '❌ Incorrect!';
-                statusEl.className = 'text-center text-xs font-bold text-rose-400 h-5';
-            }
-
-            const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
-            const doc = await pRef.get();
-            if (!doc.exists) return;
-            const pData = doc.data();
+            const isCorrect = (selectedIndex === correctIndex);
+            const responseTimeMs = Math.round((timeLimit - currentQuestionTimeLeft) * 1000);
 
             let pointsEarned = 0;
             if (isCorrect) {
-                const speedRatio = Math.max(0, currentQuestionTimeLeft / 5.0);
-                pointsEarned = Math.round(1000 * speedRatio);
+                const speedBonus = Math.max(0, Math.round((timeLimit - (responseTimeMs / 1000)) / timeLimit * 900));
+                pointsEarned = 100 + speedBonus;
             }
 
-            let newEliminated = pData.eliminated || false;
-            if (gameMode === 'suddendeath' && !isCorrect) {
-                newEliminated = true;
-                isEliminated = true;
+            const statusElem = document.getElementById('round-status');
+            if (isTimeout) {
+                statusElem.innerHTML = '<span class="text-amber-400 font-bold">⏰ Time Expired!</span>';
+            } else if (isCorrect) {
+                statusElem.innerHTML = `<span class="text-emerald-400 font-bold">✅ Correct! (+${pointsEarned} pts)</span>`;
+                buttons[selectedIndex].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+            } else {
+                statusElem.innerHTML = '<span class="text-rose-400 font-bold">❌ Incorrect!</span>';
+                if (selectedIndex >= 0 && buttons[selectedIndex]) {
+                    buttons[selectedIndex].className = 'option-btn w-full py-3.5 px-4 bg-rose-950/80 border border-rose-500 rounded-2xl text-rose-200 font-semibold text-sm text-left flex items-center justify-between';
+                }
+                if (buttons[correctIndex]) {
+                    buttons[correctIndex].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
+                }
             }
 
-            await pRef.update({
-                answer: optionIndex,
-                correctCount: isCorrect ? (pData.correctCount + 1) : pData.correctCount,
-                score: pData.score + pointsEarned,
-                eliminated: newEliminated,
-                lastResponseTimeMs: responseTimeMs
-            });
+            try {
+                const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
+                const docSnap = await pRef.get();
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    const newScore = (data.score || 0) + pointsEarned;
+                    const newCorrect = (data.correctCount || 0) + (isCorrect ? 1 : 0);
+                    let newlyEliminated = data.eliminated || false;
+
+                    if (gameMode === 'suddendeath' && !isCorrect) {
+                        newlyEliminated = true;
+                        isEliminated = true;
+                    }
+
+                    await pRef.update({
+                        answer: selectedIndex,
+                        score: newScore,
+                        correctCount: newCorrect,
+                        lastResponseTimeMs: responseTimeMs,
+                        eliminated: newlyEliminated
+                    });
+                }
+            } catch (err) {
+                console.error("Error submitting answer:", err);
+            }
         }
 
         function renderMultiplayerLeaderboard(playersMap) {
-            const listEl = document.getElementById('leaderboard-list');
-            listEl.innerHTML = '';
+            const players = Object.keys(playersMap).map(id => ({ id, ...playersMap[id] }));
+            players.sort((a, b) => b.score - a.score);
 
-            const playersArr = Object.values(playersMap).sort((a, b) => b.score - a.score);
-            
-            let myRank = '-';
-            playersArr.forEach((p, idx) => {
-                if (p.name === myName) myRank = `#${idx + 1}`;
+            const lbList = document.getElementById('leaderboard-list');
+            lbList.innerHTML = '';
+
+            let myRank = '--';
+            players.forEach((p, idx) => {
+                if (p.id === userId) myRank = idx + 1;
+                if (idx < 5) {
+                    const div = document.createElement('div');
+                    div.className = `p-3 rounded-2xl border flex justify-between items-center text-xs font-semibold ${p.id === userId ? 'bg-indigo-950/50 border-indigo-500' : 'bg-slate-950 border-slate-800'}`;
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-indigo-400">#${idx + 1}</span>
+                            <span class="text-white">${p.name} ${p.eliminated ? '💀' : ''}</span>
+                        </div>
+                        <span class="font-bold text-emerald-400">${p.score} pts</span>
+                    `;
+                    lbList.appendChild(div);
+                }
             });
 
-            document.getElementById('sticky-my-rank').innerText = myRank;
-            document.getElementById('sticky-total-players').innerText = playersArr.length;
-            if (playersMap[userId]) {
-                document.getElementById('sticky-my-score').innerText = `${playersMap[userId].score} pts`;
-            }
-
-            playersArr.slice(0, 5).forEach((p, idx) => {
-                const div = document.createElement('div');
-                div.className = 'px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center text-xs font-semibold';
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-indigo-400">${medal}</span>
-                        <span class="text-white">${p.name}</span>
-                    </div>
-                    <span class="font-mono font-bold text-emerald-400">${p.score} pts</span>
-                `;
-                listEl.appendChild(div);
-            });
+            document.getElementById('sticky-my-rank').innerText = `#${myRank}`;
+            document.getElementById('sticky-total-players').innerText = players.length;
+            document.getElementById('sticky-my-score').innerText = `${playersMap[userId]?.score || 0} pts`;
 
             db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
                 if (!doc.exists) return;
                 const rData = doc.data();
                 const isFinished = rData.status === 'finished';
 
+                const titleElem = document.getElementById('leaderboard-title');
+                const subElem = document.getElementById('leaderboard-subtitle');
+                const iconElem = document.getElementById('leaderboard-icon');
+
                 if (isFinished) {
-                    document.getElementById('leaderboard-icon').innerText = '🏆';
-                    document.getElementById('leaderboard-title').innerText = 'Final Standings!';
-                    document.getElementById('leaderboard-subtitle').innerText = 'Match Complete';
+                    iconElem.innerText = '🏆';
+                    titleElem.innerText = 'Match Complete!';
+                    const winner = players[0];
+                    subElem.innerText = winner ? `Winner: ${winner.name} with ${winner.score} pts!` : 'Well played everyone!';
                 } else {
-                    document.getElementById('leaderboard-icon').innerText = '📊';
-                    document.getElementById('leaderboard-title').innerText = 'Live Standings';
-                    document.getElementById('leaderboard-subtitle').innerText = `Question ${rData.currentQIndex + 1} of ${targetQuestionCount} Complete`;
+                    iconElem.innerText = '📊';
+                    titleElem.innerText = 'Live Standings';
+                    subElem.innerText = `Question ${(rData.currentQIndex || 0) + 1} of ${targetQuestionCount}`;
                 }
 
                 if (isHost) {
                     document.getElementById('next-round-controls').classList.remove('hidden');
                     document.getElementById('waiting-next-msg').classList.add('hidden');
+                    const nextBtn = document.getElementById('next-btn');
                     if (isFinished) {
-                        document.getElementById('next-btn').innerText = '🏠 Return to Lobby / New Game';
-                        document.getElementById('next-btn').onclick = () => location.reload();
+                        nextBtn.innerText = '🔄 Start New Match';
+                        nextBtn.onclick = () => window.location.reload();
+                    } else {
+                        nextBtn.innerText = 'Next Question ➡️';
+                        nextBtn.onclick = window.nextQuestion;
                     }
                 } else {
                     document.getElementById('next-round-controls').classList.add('hidden');
                     document.getElementById('waiting-next-msg').classList.remove('hidden');
+                    document.getElementById('waiting-next-msg').innerText = isFinished ? 'Match finished by host.' : 'Waiting for host to proceed...';
                 }
             });
         }
