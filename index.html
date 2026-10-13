@@ -216,7 +216,16 @@
     </footer>
 
     <script>
-        const MASTER_HOST_PASSCODE = "1428";
+        // SHA-256 Hash of passcode "1428"
+        const HOST_PASSCODE_HASH = "811b9a95781615f33e5c9b60e6e7655075c754d9299446d328cf2a0d16dfd60e";
+
+        async function hashString(str) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         const firebaseConfig = {
             apiKey: "AIzaSyC_F885qJNZ8zqs_FeIFpdQUutwfI2PTtQ",
@@ -406,13 +415,16 @@
             }
         }
 
-        // --- MULTIPLAYER CODE WITH PASSCODE & HOST GATE ---
+        // --- MULTIPLAYER CODE WITH SECURE HASHED PASSCODE & HOST GATE ---
         async function createRoom() {
             if (!getUsername()) return;
             if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
 
             const pass = prompt("Enter Master Host Passcode to create a game room:");
-            if (pass !== MASTER_HOST_PASSCODE) {
+            if (!pass) return;
+
+            const enteredHash = await hashString(pass);
+            if (enteredHash !== HOST_PASSCODE_HASH) {
                 alert("❌ Incorrect Passcode! Room creation blocked.");
                 return;
             }
