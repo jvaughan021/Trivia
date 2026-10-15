@@ -155,9 +155,14 @@
                         <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">💀 Sudden Death</button>
                         <button id="mode-btn-minefield" onclick="window.setRoomMode('minefield')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">💣 Minefield</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-1.5">
+                    <div class="grid grid-cols-2 gap-1.5 mb-2">
                         <button id="mode-btn-streak" onclick="window.setRoomMode('streak')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">🔥 Streak Master</button>
                         <button id="mode-btn-lives" onclick="window.setRoomMode('lives')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">❤️ Lives Mode</button>
+                    </div>
+                    
+                    <!-- Dynamic Mode Description Panel -->
+                    <div id="mode-description-box" class="p-2.5 bg-indigo-950/40 border border-indigo-500/30 rounded-xl text-[11px] text-indigo-200 font-medium leading-relaxed">
+                        🎯 <b>Classic Mode:</b> Standard scoring. Score points based on accuracy and speed. All players stay in for the whole game.
                     </div>
                 </div>
 
@@ -189,8 +194,10 @@
                 </div>
             </div>
 
-            <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden">
-                Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span> • Total Questions: <span id="current-qcount-label" class="text-indigo-400 font-bold">0</span> • Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span>
+            <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden space-y-1">
+                <div>Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span></div>
+                <div id="guest-mode-desc" class="text-[11px] text-slate-400 italic">Standard scoring. Score points based on accuracy and speed.</div>
+                <div class="text-[11px]">Total Qs: <span id="current-qcount-label" class="text-indigo-400 font-bold">0</span> • Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span></div>
             </div>
 
             <div id="host-controls" class="hidden">
@@ -303,6 +310,14 @@
 
         let matchQuestions = [];
         let livePlayersCache = {};
+
+        const modeDescriptions = {
+            classic: "🎯 Classic Mode: Standard scoring. Score points based on accuracy and speed. All players stay in for the whole game.",
+            suddendeath: "💀 Sudden Death: Single-strike elimination. One incorrect answer instantly eliminates you from the match.",
+            minefield: "💣 Minefield: High risk! Correct answers give normal points, but wrong answers subtract -500 points from your score.",
+            streak: "🔥 Streak Master: Consecutive correct answers build multipliers (up to 3x+). A single wrong answer resets your streak.",
+            lives: "❤️ Lives Mode: Players start with a shared heart pool. Wrong answers lose a life; running out of hearts eliminates you."
+        };
 
         // Parse Custom Questions Text Area
         function parseCustomQuestionsText(rawText) {
@@ -536,6 +551,10 @@
                     document.getElementById('guest-waiting-msg').classList.add('hidden');
                     document.getElementById('guest-mode-info').classList.add('hidden');
                     
+                    // Update host view mode description box
+                    const descBox = document.getElementById('mode-description-box');
+                    if (descBox) descBox.innerHTML = modeDescriptions[gameMode] || '';
+
                     if (gameMode === 'lives') {
                         document.getElementById('lives-selection-box').classList.remove('hidden');
                         document.getElementById('lives-number-input').value = startingLives;
@@ -568,6 +587,7 @@
                     if (gameMode === 'lives') modeText = `Lives Mode (${startingLives} ❤️)`;
 
                     document.getElementById('current-mode-label').innerText = modeText;
+                    document.getElementById('guest-mode-desc').innerText = modeDescriptions[gameMode] || '';
                     document.getElementById('current-qcount-label').innerText = targetQuestionCount;
                     document.getElementById('current-timer-label').innerText = targetQuestionTimer + 's';
                 }
@@ -660,6 +680,9 @@
                 }
             });
 
+            const descBox = document.getElementById('mode-description-box');
+            if (descBox) descBox.innerHTML = modeDescriptions[mode] || '';
+
             if (mode === 'lives') {
                 document.getElementById('lives-selection-box').classList.remove('hidden');
             } else {
@@ -672,11 +695,12 @@
         function setStartingLives(lives) {
             if (!isHost || !currentRoomCode) return;
             let val = parseInt(lives, 10);
-            if (isNaN(val) || val < 2) val = 2; // Minimum 2 lives so it's not sudden death
+            if (isNaN(val) || val < 2) val = 2;
             if (val > 20) val = 20;
 
             startingLives = val;
-            document.getElementById('lives-number-input').value = val;
+            const inputEl = document.getElementById('lives-number-input');
+            if (inputEl) inputEl.value = val;
 
             [2, 3, 5, 10].forEach(l => {
                 const btn = document.getElementById(`lives-btn-${l}`);
