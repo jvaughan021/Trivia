@@ -69,10 +69,9 @@
 
     <main class="w-full max-w-md my-auto">
 
-        <!-- LOBBY VIEW (STRICTLY MULTIPLAYER) -->
+        <!-- LOBBY VIEW -->
         <section id="view-lobby" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl animate-pop">
             
-            <!-- RENTAL CALLOUT BANNER -->
             <div class="bg-gradient-to-r from-indigo-950/80 to-slate-900 border border-indigo-500/30 rounded-2xl p-4 mb-5 text-left">
                 <div class="flex items-center gap-2 mb-1">
                     <span class="text-base">💼</span>
@@ -131,7 +130,7 @@
                 </ul>
             </div>
 
-            <!-- Host Mode & Custom Questions Controls -->
+            <!-- Host Controls Section -->
             <div id="host-mode-selection" class="mb-6 text-left hidden space-y-4">
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
                     <input type="checkbox" id="host-plays-checkbox" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
@@ -142,21 +141,38 @@
                 <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2">
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider">Custom Questions (Required)</label>
                     <p class="text-[11px] text-slate-400 leading-tight">Paste your question batch here (separate wrong answers with semicolons): <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1; Wrong 2; Wrong 3</code></p>
-                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3; 5; 6&#10;Capital of Scotland? | Edinburgh | Glasgow; London; Dundee" rows="5" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
+                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3; 5; 6&#10;Capital of Scotland? | Edinburgh | Glasgow; London; Dundee" rows="4" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
                     <button onclick="window.applyCustomQuestions()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
                         💾 Apply Custom Questions
                     </button>
                 </div>
 
+                <!-- Game Rules Mode Selection -->
                 <div>
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Select Game Rules:</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="mode-btn-classic" onclick="window.setRoomMode('classic')" class="py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">
-                            🎯 Classic
-                        </button>
-                        <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
-                            💀 Sudden Death
-                        </button>
+                    <div class="grid grid-cols-3 gap-1.5 mb-2">
+                        <button id="mode-btn-classic" onclick="window.setRoomMode('classic')" class="py-2 px-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-[11px] transition">🎯 Classic</button>
+                        <button id="mode-btn-suddendeath" onclick="window.setRoomMode('suddendeath')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">💀 Sudden Death</button>
+                        <button id="mode-btn-minefield" onclick="window.setRoomMode('minefield')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">💣 Minefield</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button id="mode-btn-streak" onclick="window.setRoomMode('streak')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">🔥 Streak Master</button>
+                        <button id="mode-btn-lives" onclick="window.setRoomMode('lives')" class="py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition">❤️ Lives Mode</button>
+                    </div>
+                </div>
+
+                <!-- Custom Starting Lives Controls (Host Configurable, Min 2) -->
+                <div id="lives-selection-box" class="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-3 hidden">
+                    <label class="block text-xs font-bold text-rose-400 uppercase tracking-wider">Set Starting Lives Per Player:</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="lives-number-input" min="2" max="20" value="3" onchange="window.setStartingLives(this.value)" class="w-20 bg-slate-900 border border-slate-800 focus:border-rose-500 text-center rounded-xl py-2 text-white font-bold text-sm outline-none">
+                        <span class="text-xs text-slate-400 font-medium">Lives per player (2–20)</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button id="lives-btn-2" onclick="window.setStartingLives(2)" class="py-1.5 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">2 ❤️</button>
+                        <button id="lives-btn-3" onclick="window.setStartingLives(3)" class="py-1.5 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">3 ❤️</button>
+                        <button id="lives-btn-5" onclick="window.setStartingLives(5)" class="py-1.5 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">5 ❤️</button>
+                        <button id="lives-btn-10" onclick="window.setStartingLives(10)" class="py-1.5 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">10 ❤️</button>
                     </div>
                 </div>
 
@@ -271,10 +287,13 @@
         let currentRoomCode = null;
         let isHost = false;
         let gameMode = 'classic';
+        let startingLives = 3;
         let targetQuestionCount = 0;
         let targetQuestionTimer = 15;
         let hostPlays = false;
         let isEliminated = false;
+        let myCurrentStreak = 0;
+        let myCurrentLives = 3;
         let unsubscribeRoom = null;
         let unsubscribePlayers = null;
         let timerInterval = null;
@@ -422,6 +441,7 @@
             currentRoomCode = code;
             isHost = true;
             gameMode = 'classic';
+            startingLives = 3;
             targetQuestionCount = 0;
             targetQuestionTimer = 15;
             hostPlays = false;
@@ -436,6 +456,7 @@
                 hostPlays: false,
                 status: 'waiting',
                 mode: 'classic',
+                startingLives: 3,
                 qCount: 0,
                 qTimer: 15,
                 currentQIndex: 0,
@@ -466,15 +487,20 @@
 
             currentRoomCode = code;
             isHost = false;
-            matchQuestions = doc.data().questions || [];
+            const roomData = doc.data();
+            matchQuestions = roomData.questions || [];
             targetQuestionCount = matchQuestions.length;
-            targetQuestionTimer = doc.data().qTimer || 15;
+            targetQuestionTimer = roomData.qTimer || 15;
+            startingLives = roomData.startingLives || 3;
+            myCurrentLives = startingLives;
 
             await docRef.collection('players').doc(userId).set({
                 name: myName,
                 score: 0,
                 correctCount: 0,
                 answer: null,
+                streak: 0,
+                lives: startingLives,
                 eliminated: false,
                 isHost: false,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -499,6 +525,7 @@
 
                 const data = doc.data();
                 gameMode = data.mode || 'classic';
+                startingLives = data.startingLives || 3;
                 matchQuestions = data.questions || [];
                 targetQuestionCount = matchQuestions.length;
                 targetQuestionTimer = data.qTimer || 15;
@@ -509,6 +536,13 @@
                     document.getElementById('guest-waiting-msg').classList.add('hidden');
                     document.getElementById('guest-mode-info').classList.add('hidden');
                     
+                    if (gameMode === 'lives') {
+                        document.getElementById('lives-selection-box').classList.remove('hidden');
+                        document.getElementById('lives-number-input').value = startingLives;
+                    } else {
+                        document.getElementById('lives-selection-box').classList.add('hidden');
+                    }
+
                     if (data.status === 'waiting') {
                         const startBtn = document.getElementById('start-game-btn');
                         if (matchQuestions.length === 0) {
@@ -526,7 +560,14 @@
                     document.getElementById('host-controls').classList.add('hidden');
                     document.getElementById('guest-waiting-msg').classList.remove('hidden');
                     document.getElementById('guest-mode-info').classList.remove('hidden');
-                    document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic' : 'Sudden Death';
+                    
+                    let modeText = 'Classic';
+                    if (gameMode === 'suddendeath') modeText = 'Sudden Death';
+                    if (gameMode === 'minefield') modeText = 'Minefield';
+                    if (gameMode === 'streak') modeText = 'Streak Master';
+                    if (gameMode === 'lives') modeText = `Lives Mode (${startingLives} ❤️)`;
+
+                    document.getElementById('current-mode-label').innerText = modeText;
                     document.getElementById('current-qcount-label').innerText = targetQuestionCount;
                     document.getElementById('current-timer-label').innerText = targetQuestionTimer + 's';
                 }
@@ -575,6 +616,8 @@
                     document.getElementById('sticky-my-rank').innerText = `#${myRank}`;
                     document.getElementById('sticky-total-players').innerText = players.length;
                     isEliminated = !!myPlayer.eliminated;
+                    myCurrentStreak = myPlayer.streak || 0;
+                    myCurrentLives = myPlayer.lives !== undefined ? myPlayer.lives : startingLives;
                 }
             });
         }
@@ -592,6 +635,8 @@
                     score: 0,
                     correctCount: 0,
                     answer: null,
+                    streak: 0,
+                    lives: startingLives,
                     eliminated: false,
                     isHost: true,
                     joinedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -604,9 +649,47 @@
         function setRoomMode(mode) {
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
-            document.getElementById('mode-btn-classic').className = mode === 'classic' ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition' : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-            document.getElementById('mode-btn-suddendeath').className = mode === 'suddendeath' ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition' : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+            ['classic', 'suddendeath', 'minefield', 'streak', 'lives'].forEach(m => {
+                const btn = document.getElementById(`mode-btn-${m}`);
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = "py-2 px-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-[11px] transition";
+                    } else {
+                        btn.className = "py-2 px-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-[11px] transition";
+                    }
+                }
+            });
+
+            if (mode === 'lives') {
+                document.getElementById('lives-selection-box').classList.remove('hidden');
+            } else {
+                document.getElementById('lives-selection-box').classList.add('hidden');
+            }
+
             db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
+        }
+
+        function setStartingLives(lives) {
+            if (!isHost || !currentRoomCode) return;
+            let val = parseInt(lives, 10);
+            if (isNaN(val) || val < 2) val = 2; // Minimum 2 lives so it's not sudden death
+            if (val > 20) val = 20;
+
+            startingLives = val;
+            document.getElementById('lives-number-input').value = val;
+
+            [2, 3, 5, 10].forEach(l => {
+                const btn = document.getElementById(`lives-btn-${l}`);
+                if (btn) {
+                    if (l === val) {
+                        btn.className = "py-1.5 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition";
+                    } else {
+                        btn.className = "py-1.5 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition";
+                    }
+                }
+            });
+
+            db.collection('trivia_rooms').doc(currentRoomCode).update({ startingLives: val }).catch(err => console.error("Lives sync error:", err));
         }
 
         function setRoomTimer(seconds) {
@@ -633,6 +716,20 @@
                 alert("Please apply your custom question bank before starting!");
                 return;
             }
+
+            const snap = await db.collection('trivia_rooms').doc(currentRoomCode).collection('players').get();
+            const batch = db.batch();
+            snap.forEach(pDoc => {
+                batch.update(pDoc.ref, {
+                    score: 0,
+                    correctCount: 0,
+                    answer: null,
+                    streak: 0,
+                    lives: startingLives,
+                    eliminated: false
+                });
+            });
+            await batch.commit();
 
             await db.collection('trivia_rooms').doc(currentRoomCode).update({
                 status: 'playing',
@@ -663,7 +760,13 @@
             });
 
             if (isEliminated) {
-                document.getElementById('round-status').innerText = '💀 You have been eliminated from Sudden Death!';
+                document.getElementById('round-status').innerText = '💀 You have been eliminated!';
+            } else if (gameMode === 'lives') {
+                const displayLives = Math.max(0, myCurrentLives);
+                const hearts = displayLives <= 5 ? '❤️'.repeat(displayLives) : `❤️ x${displayLives}`;
+                document.getElementById('round-status').innerText = `Lives Left: ${hearts || '0'}`;
+            } else if (gameMode === 'streak') {
+                document.getElementById('round-status').innerText = `Current Streak: 🔥 ${myCurrentStreak} (Multiplier: ${(1 + (myCurrentStreak * 0.5)).toFixed(1)}x)`;
             } else {
                 document.getElementById('round-status').innerText = 'Select your answer!';
             }
@@ -714,43 +817,74 @@
             const isCorrect = selectedIndex === correctIndex;
             const statusEl = document.getElementById('round-status');
             
-            let pointsEarned = 0;
-            if (isCorrect && !timedOut) {
-                const speedRatio = timeLeftMs / maxTimerMs;
-                pointsEarned = Math.round(100 + (speedRatio * 900));
-            }
-
-            if (timedOut) {
-                statusEl.innerText = '⏰ Time\'s up!';
-            } else if (isCorrect) {
-                statusEl.innerText = `🎉 Correct! +${pointsEarned} pts!`;
-            } else {
-                statusEl.innerText = '❌ Incorrect!';
-            }
-
             const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
             const pDoc = await pRef.get();
-            if (pDoc.exists) {
-                const data = pDoc.data();
-                let currentScore = data.score || 0;
-                let currentCorrect = data.correctCount || 0;
-                let eliminated = data.eliminated || false;
+            if (!pDoc.exists) return;
 
-                if (isCorrect) {
-                    currentScore += pointsEarned;
-                    currentCorrect += 1;
+            const data = pDoc.data();
+            let currentScore = data.score || 0;
+            let currentCorrect = data.correctCount || 0;
+            let currentStreak = data.streak || 0;
+            let currentLives = data.lives !== undefined ? data.lives : startingLives;
+            let eliminated = data.eliminated || false;
+
+            let pointsEarned = 0;
+            const speedRatio = timeLeftMs / maxTimerMs;
+            const basePoints = Math.round(100 + (speedRatio * 900));
+
+            if (isCorrect && !timedOut) {
+                currentCorrect += 1;
+                
+                if (gameMode === 'streak') {
+                    currentStreak += 1;
+                    const multiplier = 1 + (currentStreak * 0.5);
+                    pointsEarned = Math.round(basePoints * multiplier);
+                    statusEl.innerText = `🎉 Correct! +${pointsEarned} pts! (Streak 🔥 ${currentStreak})`;
+                } else {
+                    pointsEarned = basePoints;
+                    statusEl.innerText = `🎉 Correct! +${pointsEarned} pts!`;
+                }
+
+                currentScore += pointsEarned;
+            } else {
+                if (gameMode === 'streak') {
+                    currentStreak = 0;
+                }
+
+                if (gameMode === 'minefield') {
+                    if (timedOut) {
+                        statusEl.innerText = '⏰ Timed out! 0 pts lost.';
+                    } else {
+                        pointsEarned = -500;
+                        currentScore = Math.max(0, currentScore - 500);
+                        statusEl.innerText = '💣 Minefield Hit! -500 pts!';
+                    }
                 } else if (gameMode === 'suddendeath') {
                     eliminated = true;
                     isEliminated = true;
+                    statusEl.innerText = timedOut ? '⏰ Time\'s up! Eliminated!' : '❌ Incorrect! Eliminated!';
+                } else if (gameMode === 'lives') {
+                    currentLives -= 1;
+                    if (currentLives <= 0) {
+                        eliminated = true;
+                        isEliminated = true;
+                        statusEl.innerText = '💔 Out of lives! Eliminated!';
+                    } else {
+                        statusEl.innerText = `❌ Incorrect! ${currentLives} ❤️ left!`;
+                    }
+                } else {
+                    statusEl.innerText = timedOut ? '⏰ Time\'s up!' : '❌ Incorrect!';
                 }
-
-                await pRef.update({
-                    score: currentScore,
-                    correctCount: currentCorrect,
-                    answer: selectedIndex,
-                    eliminated: eliminated
-                });
             }
+
+            await pRef.update({
+                score: currentScore,
+                correctCount: currentCorrect,
+                streak: currentStreak,
+                lives: currentLives,
+                answer: selectedIndex,
+                eliminated: eliminated
+            });
 
             setTimeout(async () => {
                 if (isHost) {
@@ -785,11 +919,24 @@
             const listEl = document.getElementById('leaderboard-list');
             listEl.innerHTML = players.slice(0, 10).map((p, index) => {
                 const rankDisplay = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                
+                let extraTag = '';
+                if (gameMode === 'lives') {
+                    extraTag = p.eliminated ? '<span class="text-xs text-rose-500 font-bold">💀 Out</span>' : `<span class="text-xs text-rose-400 font-bold">${p.lives !== undefined ? p.lives : startingLives} ❤️</span>`;
+                } else if (gameMode === 'streak' && p.streak > 1) {
+                    extraTag = `<span class="text-xs text-amber-400 font-bold">🔥 ${p.streak}</span>`;
+                } else if (p.eliminated) {
+                    extraTag = '<span class="text-xs text-rose-500 font-bold">💀 Out</span>';
+                }
+
                 return `
                     <div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3">
                         <div class="flex items-center gap-3">
                             <span class="font-black text-sm w-6 text-center ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500'}">${rankDisplay}</span>
-                            <span class="font-bold text-white text-sm">${p.name} ${p.id === userId ? '(You)' : ''} ${p.eliminated ? '💀' : ''}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-white text-sm">${p.name} ${p.id === userId ? '(You)' : ''}</span>
+                                ${extraTag}
+                            </div>
                         </div>
                         <span class="font-black text-emerald-400 text-sm">${p.score} pts</span>
                     </div>
