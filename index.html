@@ -140,8 +140,8 @@
                 <!-- Custom Questions Input Section -->
                 <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2">
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider">Custom Questions (Optional)</label>
-                    <p class="text-[11px] text-slate-400 leading-tight">Leave blank to use OpenTDB API. Format per line: <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1, Wrong 2, Wrong 3</code></p>
-                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3, 5, 6&#10;Capital of Scotland? | Edinburgh | Glasgow, London, Dundee" rows="3" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
+                    <p class="text-[11px] text-slate-400 leading-tight">Leave blank to use OpenTDB API. Format per line (separate wrong answers with semicolons): <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1; Wrong 2; Wrong 3</code></p>
+                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3; 5; 6&#10;Capital of Scotland? | Edinburgh | Glasgow; London; Dundee" rows="3" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
                     <button onclick="window.applyCustomQuestions()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
                         💾 Apply Custom Questions
                     </button>
@@ -409,7 +409,7 @@
             return uniqueQuestions.slice(0, amount);
         }
 
-        // Parse Custom Questions Text Area
+        // Parse Custom Questions Text Area (Using ';' for wrong options so numbers with commas remain intact)
         function parseCustomQuestionsText(rawText) {
             const lines = rawText.split('\n');
             let parsed = [];
@@ -418,7 +418,7 @@
                 if (parts.length >= 3) {
                     const qText = parts[0];
                     const correctAns = parts[1];
-                    const wrongAns = parts[2].split(',').map(w => w.trim());
+                    const wrongAns = parts[2].split(';').map(w => w.trim());
                     
                     const options = [...wrongAns];
                     const correctIndex = Math.floor(Math.random() * (options.length + 1));
@@ -444,7 +444,7 @@
 
             const customQs = parseCustomQuestionsText(textVal);
             if (customQs.length === 0) {
-                alert("Invalid format! Please use: Question | Correct Answer | Wrong 1, Wrong 2, Wrong 3");
+                alert("Invalid format! Please use: Question | Correct Answer | Wrong 1; Wrong 2; Wrong 3");
                 return;
             }
 
@@ -552,7 +552,6 @@
             hostPlays = false;
             isEliminated = false;
 
-            // Check if custom questions were provided upon creation
             const customText = document.getElementById('custom-questions-input')?.value.trim() || '';
             if (customText) {
                 const customQs = parseCustomQuestionsText(customText);
