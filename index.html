@@ -130,18 +130,18 @@
                 </ul>
             </div>
 
-            <!-- Host Mode, Participation, Timer, Difficulty & Question Count Controls -->
+            <!-- Host Mode & Custom Questions Controls -->
             <div id="host-mode-selection" class="mb-6 text-left hidden space-y-4">
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
                     <input type="checkbox" id="host-plays-checkbox" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
                     <label for="host-plays-checkbox" class="cursor-pointer">Participate as a player in this match</label>
                 </div>
 
-                <!-- Custom Questions Input Section -->
+                <!-- Custom Questions Input Section (Mandatory for Custom Engine) -->
                 <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2">
-                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider">Custom Questions (Optional)</label>
-                    <p class="text-[11px] text-slate-400 leading-tight">Leave blank to use OpenTDB API. Format per line (separate wrong answers with semicolons): <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1; Wrong 2; Wrong 3</code></p>
-                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3; 5; 6&#10;Capital of Scotland? | Edinburgh | Glasgow; London; Dundee" rows="3" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
+                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider">Custom Questions (Required)</label>
+                    <p class="text-[11px] text-slate-400 leading-tight">Paste your question batch here (separate wrong answers with semicolons): <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1; Wrong 2; Wrong 3</code></p>
+                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3; 5; 6&#10;Capital of Scotland? | Edinburgh | Glasgow; London; Dundee" rows="5" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
                     <button onclick="window.applyCustomQuestions()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
                         💾 Apply Custom Questions
                     </button>
@@ -159,15 +159,7 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Question Difficulty:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button id="diff-btn-easy" onclick="window.setRoomDifficulty('easy')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">Easy</button>
-                        <button id="diff-btn-medium" onclick="window.setRoomDifficulty('medium')" class="py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">Medium</button>
-                        <button id="diff-btn-hard" onclick="window.setRoomDifficulty('hard')" class="py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">Hard</button>
-                    </div>
-                </div>
-
+                <!-- Timer Selection -->
                 <div>
                     <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Question Timer:</label>
                     <div class="grid grid-cols-5 gap-1.5">
@@ -178,28 +170,10 @@
                         <button id="timer-btn-30" onclick="window.setRoomTimer(30)" class="py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">30s</button>
                     </div>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Number of Questions:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button id="qcount-btn-5" onclick="window.setQuestionCount(5)" class="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
-                            5 Qs
-                        </button>
-                        <button id="qcount-btn-10" onclick="window.setQuestionCount(10)" class="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition">
-                            10 Qs
-                        </button>
-                        <button id="qcount-btn-20" onclick="window.setQuestionCount(20)" class="py-2 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition">
-                            20 Qs
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <div id="guest-mode-info" class="mb-4 text-xs font-semibold text-slate-400 hidden">
-                Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span> • 
-                Diff: <span id="current-diff-label" class="text-indigo-400 font-bold">Medium</span> • 
-                Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span> • 
-                Length: <span id="current-qcount-label" class="text-indigo-400 font-bold">20 Questions</span>
+                Mode: <span id="current-mode-label" class="text-indigo-400 font-bold">Classic</span> • Total Questions: <span id="current-qcount-label" class="text-indigo-400 font-bold">0</span> • Timer: <span id="current-timer-label" class="text-indigo-400 font-bold">15s</span>
             </div>
 
             <div id="host-controls" class="hidden">
@@ -215,7 +189,7 @@
         <!-- QUESTION ARENA VIEW -->
         <section id="view-game" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl hidden">
             <div class="flex justify-between items-center bg-slate-950/60 border border-slate-800 rounded-2xl px-4 py-2.5 mb-4">
-                <span id="q-progress" class="text-xs font-bold text-indigo-400">Question 1 / 20</span>
+                <span id="q-progress" class="text-xs font-bold text-indigo-400">Question 1 / 0</span>
                 <span id="q-timer" class="text-sm font-mono font-black text-amber-400 animate-pulse">⏱️ 15.0s</span>
             </div>
 
@@ -296,8 +270,7 @@
         let currentRoomCode = null;
         let isHost = false;
         let gameMode = 'classic';
-        let targetDifficulty = 'medium';
-        let targetQuestionCount = 20;
+        let targetQuestionCount = 0;
         let targetQuestionTimer = 15;
         let hostPlays = false;
         let isEliminated = false;
@@ -309,105 +282,6 @@
 
         let matchQuestions = [];
         let livePlayersCache = {};
-
-        function getSeenQuestions() {
-            try {
-                return JSON.parse(localStorage.getItem('trivia_seen_questions') || '[]');
-            } catch (e) {
-                return [];
-            }
-        }
-
-        function markQuestionAsSeen(questionText) {
-            let seen = getSeenQuestions();
-            if (!seen.includes(questionText)) {
-                seen.push(questionText);
-                if (seen.length > 300) seen.shift();
-                localStorage.setItem('trivia_seen_questions', JSON.stringify(seen));
-            }
-        }
-
-        function decodeHTML(html) {
-            const txt = document.createElement('textarea');
-            txt.innerHTML = html;
-            return txt.value;
-        }
-
-        async function fetchMatchQuestions(amount = 20, difficulty = 'medium', retries = 3) {
-            const seenQuestions = getSeenQuestions();
-            let uniqueQuestions = [];
-            const requestAmount = Math.min(amount + 15, 50);
-
-            for (let attempt = 0; attempt < retries; attempt++) {
-                try {
-                    const res = await fetch(`https://opentdb.com/api.php?amount=${requestAmount}&difficulty=${difficulty}&type=multiple`);
-                    
-                    if (res.status === 429) {
-                        await new Promise(r => setTimeout(r, 1200));
-                        continue;
-                    }
-
-                    if (!res.ok) throw new Error(`API Status ${res.status}`);
-                    const data = await res.json();
-
-                    if (data.response_code === 0 && data.results && data.results.length > 0) {
-                        for (let item of data.results) {
-                            const formattedQ = decodeHTML(item.question);
-
-                            if (seenQuestions.includes(formattedQ)) continue;
-
-                            const correct = decodeHTML(item.correct_answer);
-                            const incorrects = item.incorrect_answers.map(decodeHTML);
-                            const options = [...incorrects];
-                            const correctIndex = Math.floor(Math.random() * 4);
-                            options.splice(correctIndex, 0, correct);
-
-                            uniqueQuestions.push({
-                                q: formattedQ,
-                                options: options,
-                                correct: Number(correctIndex)
-                            });
-
-                            markQuestionAsSeen(formattedQ);
-
-                            if (uniqueQuestions.length === amount) break;
-                        }
-                    }
-
-                    if (uniqueQuestions.length === amount) return uniqueQuestions;
-                } catch (err) {
-                    console.warn(`Attempt ${attempt + 1} failed. Retrying...`, err);
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            }
-
-            if (uniqueQuestions.length < amount) {
-                try {
-                    const fallbackRes = await fetch(`https://opentdb.com/api.php?amount=${amount - uniqueQuestions.length}&type=multiple`);
-                    const fallbackData = await fallbackRes.json();
-                    if (fallbackData.response_code === 0 && fallbackData.results) {
-                        for (let item of fallbackData.results) {
-                            const formattedQ = decodeHTML(item.question);
-                            const correct = decodeHTML(item.correct_answer);
-                            const incorrects = item.incorrect_answers.map(decodeHTML);
-                            const options = [...incorrects];
-                            const correctIndex = Math.floor(Math.random() * 4);
-                            options.splice(correctIndex, 0, correct);
-
-                            uniqueQuestions.push({
-                                q: formattedQ,
-                                options: options,
-                                correct: Number(correctIndex)
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.error("Secondary OpenTDB fetch error:", e);
-                }
-            }
-
-            return uniqueQuestions.slice(0, amount);
-        }
 
         // Parse Custom Questions Text Area (Using ';' for wrong options so numbers with commas remain intact)
         function parseCustomQuestionsText(rawText) {
@@ -546,24 +420,11 @@
             currentRoomCode = code;
             isHost = true;
             gameMode = 'classic';
-            targetDifficulty = 'medium';
-            targetQuestionCount = 20;
+            targetQuestionCount = 0;
             targetQuestionTimer = 15;
             hostPlays = false;
             isEliminated = false;
-
-            const customText = document.getElementById('custom-questions-input')?.value.trim() || '';
-            if (customText) {
-                const customQs = parseCustomQuestionsText(customText);
-                if (customQs.length > 0) {
-                    matchQuestions = customQs;
-                    targetQuestionCount = customQs.length;
-                } else {
-                    matchQuestions = await fetchMatchQuestions(20, 'medium');
-                }
-            } else {
-                matchQuestions = await fetchMatchQuestions(20, 'medium');
-            }
+            matchQuestions = [];
 
             const roomData = {
                 code: code,
@@ -573,20 +434,144 @@
                 hostPlays: false,
                 status: 'waiting',
                 mode: 'classic',
-                difficulty: 'medium',
-                qCount: targetQuestionCount,
+                qCount: 0,
                 qTimer: 15,
                 currentQIndex: 0,
-                questions: matchQuestions,
+                questions: [],
                 questionStartTime: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await db.collection('trivia_rooms').doc(code).set(roomData);
-
             document.getElementById('host-plays-checkbox').checked = false;
+            listenToRoom(code);
+        }
+
+        async function joinRoom() {
+            if (!getUsername()) return;
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (code.length !== 4) {
+                alert('Please enter a valid 4-character room code!');
+                return;
+            }
+
+            const docRef = db.collection('trivia_rooms').doc(code);
+            const doc = await docRef.get();
+            if (!doc.exists) {
+                alert('Room not found! Check code and try again.');
+                return;
+            }
+
+            currentRoomCode = code;
+            isHost = false;
+            matchQuestions = doc.data().questions || [];
+            targetQuestionCount = matchQuestions.length;
+            targetQuestionTimer = doc.data().qTimer || 15;
+
+            await docRef.collection('players').doc(userId).set({
+                name: myName,
+                score: 0,
+                correctCount: 0,
+                answer: null,
+                eliminated: false,
+                isHost: false,
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
 
             listenToRoom(code);
+        }
+
+        function listenToRoom(code) {
+            currentRoomCode = code;
+            document.getElementById('display-room-code').innerText = code;
+
+            if (unsubscribeRoom) unsubscribeRoom();
+            if (unsubscribePlayers) unsubscribePlayers();
+
+            unsubscribeRoom = db.collection('trivia_rooms').doc(code).onSnapshot(doc => {
+                if (!doc.exists) {
+                    alert('Room was closed by host.');
+                    window.location.reload();
+                    return;
+                }
+
+                const data = doc.data();
+                gameMode = data.mode || 'classic';
+                matchQuestions = data.questions || [];
+                targetQuestionCount = matchQuestions.length;
+                targetQuestionTimer = data.qTimer || 15;
+
+                if (isHost) {
+                    document.getElementById('host-mode-selection').classList.remove('hidden');
+                    document.getElementById('host-controls').classList.remove('hidden');
+                    document.getElementById('guest-waiting-msg').classList.add('hidden');
+                    document.getElementById('guest-mode-info').classList.add('hidden');
+                    
+                    if (data.status === 'waiting') {
+                        const startBtn = document.getElementById('start-game-btn');
+                        if (matchQuestions.length === 0) {
+                            startBtn.disabled = true;
+                            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                            startBtn.innerText = '⚠️ Apply Custom Questions First';
+                        } else {
+                            startBtn.disabled = false;
+                            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            startBtn.innerText = `🚀 Start Match (${matchQuestions.length} Questions)`;
+                        }
+                    }
+                } else {
+                    document.getElementById('host-mode-selection').classList.add('hidden');
+                    document.getElementById('host-controls').classList.add('hidden');
+                    document.getElementById('guest-waiting-msg').classList.remove('hidden');
+                    document.getElementById('guest-mode-info').classList.remove('hidden');
+                    document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic' : 'Sudden Death';
+                    document.getElementById('current-qcount-label').innerText = targetQuestionCount;
+                    document.getElementById('current-timer-label').innerText = targetQuestionTimer + 's';
+                }
+
+                if (data.status === 'waiting') {
+                    switchView('view-waiting');
+                } else if (data.status === 'playing') {
+                    switchView('view-game');
+                    renderQuestion(data);
+                } else if (data.status === 'leaderboard') {
+                    switchView('view-leaderboard');
+                    renderLeaderboard(data, false);
+                } else if (data.status === 'finished') {
+                    switchView('view-leaderboard');
+                    renderLeaderboard(data, true);
+                }
+            });
+
+            unsubscribePlayers = db.collection('trivia_rooms').doc(code).collection('players').onSnapshot(snapshot => {
+                let players = [];
+                livePlayersCache = {};
+                snapshot.forEach(doc => {
+                    const p = { id: doc.id, ...doc.data() };
+                    players.push(p);
+                    livePlayersCache[doc.id] = p;
+                });
+
+                players.sort((a, b) => b.score - a.score);
+
+                document.getElementById('player-count').innerText = players.length;
+                const pListEl = document.getElementById('players-list');
+                pListEl.innerHTML = players.map(p => `
+                    <li class="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold">
+                        <span class="text-white">${p.name} ${p.id === userId ? '(You)' : ''}</span>
+                        <span class="text-emerald-400">${p.score} pts</span>
+                    </li>
+                `).join('');
+
+                const myPlayer = players.find(p => p.id === userId);
+                if (myPlayer) {
+                    document.getElementById('sticky-my-score').innerText = `${myPlayer.score} pts`;
+                    const myRank = players.findIndex(p => p.id === userId) + 1;
+                    document.getElementById('sticky-my-rank').innerText = `#${myRank}`;
+                    document.getElementById('sticky-total-players').innerText = players.length;
+                    isEliminated = !!myPlayer.eliminated;
+                }
+            });
         }
 
         async function toggleHostParticipation(shouldPlay) {
@@ -614,229 +599,36 @@
         function setRoomMode(mode) {
             if (!isHost || !currentRoomCode) return;
             gameMode = mode;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+            document.getElementById('mode-btn-classic').className = mode === 'classic' ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition' : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
+            document.getElementById('mode-btn-suddendeath').className = mode === 'suddendeath' ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition' : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
             db.collection('trivia_rooms').doc(currentRoomCode).update({ mode: mode }).catch(err => console.error("Mode sync error:", err));
-        }
-
-        function setRoomDifficulty(diff) {
-            if (!isHost || !currentRoomCode) return;
-            targetDifficulty = diff;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
-
-            fetchMatchQuestions(targetQuestionCount, diff).then(questions => {
-                matchQuestions = questions;
-                return db.collection('trivia_rooms').doc(currentRoomCode).update({
-                    difficulty: diff,
-                    questions: matchQuestions
-                });
-            }).catch(err => console.error("Difficulty sync error:", err));
         }
 
         function setRoomTimer(seconds) {
             if (!isHost || !currentRoomCode) return;
             targetQuestionTimer = seconds;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
+
+            [10, 15, 20, 25, 30].forEach(sec => {
+                const btn = document.getElementById(`timer-btn-${sec}`);
+                if (btn) {
+                    if (sec === seconds) {
+                        btn.className = "py-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition";
+                    } else {
+                        btn.className = "py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition";
+                    }
+                }
+            });
+
             db.collection('trivia_rooms').doc(currentRoomCode).update({ qTimer: seconds }).catch(err => console.error("Timer sync error:", err));
         }
 
-        function setQuestionCount(count) {
-            if (!isHost || !currentRoomCode) return;
-            targetQuestionCount = count;
-            renderWaitingRoom({ code: currentRoomCode, mode: gameMode, difficulty: targetDifficulty, qCount: targetQuestionCount, qTimer: targetQuestionTimer });
-
-            fetchMatchQuestions(count, targetDifficulty).then(questions => {
-                matchQuestions = questions;
-                return db.collection('trivia_rooms').doc(currentRoomCode).update({
-                    qCount: count,
-                    questions: matchQuestions
-                });
-            }).catch(err => console.error("Question count sync error:", err));
-        }
-
-        async function joinRoom() {
-            if (!getUsername()) return;
-            if (!db) { alert("Firebase is initializing, please try again in a second!"); return; }
-
-            isEliminated = false;
-            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
-            if (code.length !== 4) {
-                alert('Please enter a 4-letter room code.');
-                return;
-            }
-
-            const roomRef = db.collection('trivia_rooms').doc(code);
-            const docSnap = await roomRef.get();
-            if (!docSnap.exists) { alert('Room not found!'); return; }
-
-            const data = docSnap.data();
-            if (data.status !== 'waiting') { alert('Game already in progress!'); return; }
-
-            if (!data.isHostConnected) {
-                alert(`❌ Room unavailable. The authorized host (${data.hostName || 'Host'}) is not currently in this room.`);
-                return;
-            }
-
-            const playersSnap = await roomRef.collection('players').get();
-            const currentPlayersCount = playersSnap.size;
-            
-            const maxPlayersLimit = 20;
-            if (currentPlayersCount >= maxPlayersLimit) {
-                alert('Room is full! Maximum 20 active players allowed per match.');
-                return;
-            }
-
-            currentRoomCode = code;
-            isHost = false;
-
-            await roomRef.collection('players').doc(userId).set({
-                name: myName,
-                score: 0,
-                correctCount: 0,
-                answer: null,
-                eliminated: false,
-                isHost: false,
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            listenToRoom(code);
-        }
-
-        function listenToRoom(code) {
-            if (unsubscribeRoom) unsubscribeRoom();
-            if (unsubscribePlayers) unsubscribePlayers();
-
-            unsubscribeRoom = db.collection('trivia_rooms').doc(code).onSnapshot((doc) => {
-                if (!doc.exists) return;
-                const data = doc.data();
-                matchQuestions = data.questions || [];
-                gameMode = data.mode || 'classic';
-                targetDifficulty = data.difficulty || 'medium';
-                targetQuestionCount = data.qCount || 20;
-                targetQuestionTimer = data.qTimer || 15;
-                hostPlays = data.hostPlays || false;
-
-                if (data.status === 'waiting') {
-                    renderWaitingRoom(data);
-                } else if (data.status === 'playing') {
-                    renderMultiplayerQuestion(data);
-                    switchView('view-game');
-                } else if (data.status === 'leaderboard' || data.status === 'finished') {
-                    renderMultiplayerLeaderboard(livePlayersCache);
-                    switchView('view-leaderboard');
-                }
-            });
-
-            unsubscribePlayers = db.collection('trivia_rooms').doc(code).collection('players').onSnapshot((snapshot) => {
-                let playersMap = {};
-                snapshot.forEach(docSnap => {
-                    playersMap[docSnap.id] = docSnap.data();
-                });
-                livePlayersCache = playersMap;
-
-                if (playersMap[userId]) {
-                    isEliminated = playersMap[userId].eliminated || false;
-                }
-
-                const roomDocElem = document.getElementById('view-waiting');
-                if (!roomDocElem.classList.contains('hidden')) {
-                    updateWaitingPlayersList(playersMap);
-                }
-
-                const gameDocElem = document.getElementById('view-game');
-                if (!gameDocElem.classList.contains('hidden') && isHost) {
-                    checkIfAllPlayersAnswered(playersMap);
-                }
-
-                const lbDocElem = document.getElementById('view-leaderboard');
-                if (!lbDocElem.classList.contains('hidden')) {
-                    renderMultiplayerLeaderboard(playersMap);
-                }
-            });
-        }
-
-        function updateWaitingPlayersList(playersMap) {
-            const playersList = document.getElementById('players-list');
-            playersList.innerHTML = '';
-            const playerKeys = Object.keys(playersMap);
-            document.getElementById('player-count').innerText = playerKeys.length;
-
-            playerKeys.forEach(pId => {
-                const p = playersMap[pId];
-                const li = document.createElement('li');
-                li.className = 'px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center text-xs font-semibold';
-                li.innerHTML = `<span>👤 ${p.name}</span> ${p.isHost ? '<span class="text-amber-400 text-[10px] font-bold">HOST</span>' : ''}`;
-                playersList.appendChild(li);
-            });
-        }
-
-        function renderWaitingRoom(data) {
-            document.getElementById('display-room-code').innerText = data.code || currentRoomCode;
-            if (isHost) {
-                document.getElementById('host-controls').classList.remove('hidden');
-                document.getElementById('host-mode-selection').classList.remove('hidden');
-                document.getElementById('guest-mode-info').classList.add('hidden');
-                document.getElementById('guest-waiting-msg').classList.add('hidden');
-
-                const isClassic = gameMode === 'classic';
-                document.getElementById('mode-btn-classic').className = isClassic 
-                    ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
-                    : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-                document.getElementById('mode-btn-suddendeath').className = !isClassic 
-                    ? 'py-2.5 px-3 rounded-xl border border-rose-500 bg-rose-950/60 text-white font-bold text-xs transition'
-                    : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-
-                ['easy', 'medium', 'hard'].forEach(diff => {
-                    const btn = document.getElementById(`diff-btn-${diff}`);
-                    if (btn) {
-                        btn.className = targetDifficulty === diff
-                            ? 'py-2.5 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
-                            : 'py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-                    }
-                });
-
-                [10, 15, 20, 25, 30].forEach(sec => {
-                    const btn = document.getElementById(`timer-btn-${sec}`);
-                    if (btn) {
-                        btn.className = targetQuestionTimer === sec
-                            ? 'py-2 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
-                            : 'py-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-                    }
-                });
-
-                [5, 10, 20].forEach(cnt => {
-                    const btn = document.getElementById(`qcount-btn-${cnt}`);
-                    if (btn) {
-                        btn.className = targetQuestionCount === cnt
-                            ? 'py-2 px-3 rounded-xl border border-indigo-500 bg-indigo-950/60 text-white font-bold text-xs transition'
-                            : 'py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 font-bold text-xs transition';
-                    }
-                });
-            } else {
-                document.getElementById('host-controls').classList.add('hidden');
-                document.getElementById('host-mode-selection').classList.add('hidden');
-                document.getElementById('guest-mode-info').classList.remove('hidden');
-                document.getElementById('guest-waiting-msg').classList.remove('hidden');
-                document.getElementById('current-mode-label').innerText = gameMode === 'classic' ? 'Classic' : '💀 Sudden Death';
-                document.getElementById('current-diff-label').innerText = targetDifficulty.charAt(0).toUpperCase() + targetDifficulty.slice(1);
-                document.getElementById('current-timer-label').innerText = `${targetQuestionTimer}s`;
-                document.getElementById('current-qcount-label').innerText = `${targetQuestionCount} Questions`;
-            }
-            switchView('view-waiting');
-        }
-
-        async function checkIfAllPlayersAnswered(playersMap) {
-            const players = Object.values(playersMap);
-            if (players.length === 0) return;
-            const activePlayers = players.filter(p => !p.eliminated);
-            const allAnswered = activePlayers.every(p => p.answer !== null && p.answer !== undefined);
-
-            if (allAnswered && activePlayers.length > 0) {
-                await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
-            }
-        }
-
         async function startGame() {
-            if (!isHost) return;
+            if (!isHost || !currentRoomCode) return;
+            if (matchQuestions.length === 0) {
+                alert("Please apply your custom question bank before starting!");
+                return;
+            }
+
             await db.collection('trivia_rooms').doc(currentRoomCode).update({
                 status: 'playing',
                 currentQIndex: 0,
@@ -844,217 +636,167 @@
             });
         }
 
-        function renderMultiplayerQuestion(roomData) {
-            if (isEliminated) {
-                switchView('view-leaderboard');
-                return;
-            }
-
+        function renderQuestion(roomData) {
             const qIndex = roomData.currentQIndex || 0;
-            const qData = (roomData.questions || [])[qIndex];
-            const timeLimit = roomData.qTimer || 15;
+            const qObj = matchQuestions[qIndex];
+            if (!qObj) return;
 
-            if (!qData) {
-                switchView('view-leaderboard');
-                return;
-            }
+            document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / ${targetQuestionCount}`;
+            document.getElementById('q-text').innerText = qObj.q;
 
-            document.getElementById('q-progress').innerText = `Question ${qIndex + 1} / ${roomData.questions.length}`;
-            document.getElementById('q-text').innerText = qData.q;
+            hasAnswered = false;
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
 
-            const isHostSpectator = isHost && !hostPlays;
+            const colors = ['bg-blue-600 hover:bg-blue-500', 'bg-violet-600 hover:bg-violet-500', 'bg-rose-600 hover:bg-rose-500', 'bg-amber-600 hover:bg-amber-500'];
 
-            if (isHostSpectator) {
-                document.getElementById('round-status').innerHTML = '<span class="text-amber-400 font-bold">🎙️ Host Spectator Mode (Live Question)</span>';
+            qObj.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full py-3.5 px-4 rounded-2xl text-white font-bold text-sm shadow-lg ${colors[idx % colors.length]} flex items-center justify-between`;
+                btn.innerHTML = `<span>${optText}</span>`;
+                btn.onclick = () => submitAnswer(idx, qObj.correct);
+                if (isEliminated) btn.disabled = true;
+                container.appendChild(btn);
+            });
+
+            if (isEliminated) {
+                document.getElementById('round-status').innerText = '💀 You have been eliminated from Sudden Death!';
             } else {
                 document.getElementById('round-status').innerText = 'Select your answer!';
             }
 
-            const optsContainer = document.getElementById('options-container');
-            optsContainer.innerHTML = '';
-
-            const correctIdxNum = Number(qData.correct);
-
-            qData.options.forEach((optText, index) => {
-                const btn = document.createElement('button');
-                btn.setAttribute('data-index', index);
-                
-                if (isHostSpectator) {
-                    if (index === correctIdxNum) {
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
-                        btn.innerHTML = `<span><span class="text-emerald-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span> <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 font-bold">CORRECT</span>`;
-                    } else {
-                        btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 border border-slate-800 rounded-2xl text-slate-400 font-semibold text-sm text-left flex items-center justify-between opacity-60';
-                        btn.innerHTML = `<span><span class="text-slate-500 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
-                    }
-                    btn.disabled = true;
-                } else {
-                    btn.className = 'option-btn w-full py-3.5 px-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-2xl text-white font-semibold text-sm text-left transition flex items-center justify-between group';
-                    btn.innerHTML = `<span><span class="text-indigo-400 font-mono mr-2">${String.fromCharCode(65 + index)}.</span> ${optText}</span>`;
-                    btn.onclick = () => submitAnswer(index, correctIdxNum, false, timeLimit);
-                }
-                
-                optsContainer.appendChild(btn);
-            });
-
-            hasAnswered = false;
-            currentQuestionTimeLeft = timeLimit;
-            const timerElem = document.getElementById('q-timer');
-            timerElem.innerText = `⏱️ ${timeLimit.toFixed(1)}s`;
-
             if (timerInterval) clearInterval(timerInterval);
-            
+            const timerLimit = roomData.qTimer || 15;
+            currentQuestionTimeLeft = Number(timerLimit);
+
             const startTime = roomData.questionStartTime ? roomData.questionStartTime.toMillis() : Date.now();
 
             timerInterval = setInterval(() => {
                 const elapsed = (Date.now() - startTime) / 1000;
-                currentQuestionTimeLeft = Math.max(0, timeLimit - elapsed);
-                timerElem.innerText = `⏱️ ${currentQuestionTimeLeft.toFixed(1)}s`;
+                const left = Math.max(0, currentQuestionTimeLeft - elapsed);
+                document.getElementById('q-timer').innerText = `⏱️ ${left.toFixed(1)}s`;
 
-                if (currentQuestionTimeLeft <= 0) {
+                if (left <= 0) {
                     clearInterval(timerInterval);
-                    if (!hasAnswered && !isHostSpectator) {
-                        submitAnswer(-1, correctIdxNum, true, timeLimit);
+                    if (isHost && !hasAnswered && !isEliminated && (!isHost || hostPlays)) {
+                        submitAnswer(-1, qObj.correct, true);
                     }
                 }
             }, 100);
         }
 
-        async function submitAnswer(selectedIndex, correctIndex, isTimeout = false, timeLimit = 15) {
-            if (hasAnswered) return;
+        async function submitAnswer(selectedIndex, correctIndex, timedOut = false) {
+            if (hasAnswered || isEliminated) return;
             hasAnswered = true;
+
             if (timerInterval) clearInterval(timerInterval);
 
-            const selectedIdxNum = Number(selectedIndex);
-            const correctIdxNum = Number(correctIndex);
+            const buttons = document.querySelectorAll('#options-container button');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === correctIndex) {
+                    btn.classList.remove('bg-blue-600', 'bg-violet-600', 'bg-rose-600', 'bg-amber-600');
+                    btn.classList.add('bg-emerald-600', 'ring-4', 'ring-emerald-400/50');
+                } else if (idx === selectedIndex && selectedIndex !== correctIndex) {
+                    btn.classList.remove('bg-blue-600', 'bg-violet-600', 'bg-rose-600', 'bg-amber-600');
+                    btn.classList.add('bg-red-600', 'ring-4', 'ring-red-400/50');
+                } else {
+                    btn.classList.add('opacity-40');
+                }
+            });
 
-            const buttons = document.querySelectorAll('#options-container .option-btn');
-            buttons.forEach(btn => btn.disabled = true);
-
-            const isCorrect = (!isTimeout && selectedIdxNum === correctIdxNum);
-            const responseTimeMs = Math.round((timeLimit - currentQuestionTimeLeft) * 1000);
-
-            let pointsEarned = 0;
-            if (isCorrect) {
-                const speedBonus = Math.max(0, Math.round((timeLimit - (responseTimeMs / 1000)) / timeLimit * 900));
-                pointsEarned = 100 + speedBonus;
-            }
-
-            const statusElem = document.getElementById('round-status');
-            if (isTimeout) {
-                statusElem.innerHTML = '<span class="text-amber-400 font-bold">⏰ Time Expired!</span>';
+            const isCorrect = selectedIndex === correctIndex;
+            const statusEl = document.getElementById('round-status');
+            
+            if (timedOut) {
+                statusEl.innerText = '⏰ Time\'s up!';
             } else if (isCorrect) {
-                statusElem.innerHTML = `<span class="text-emerald-400 font-bold">✅ Correct! (+${pointsEarned} pts)</span>`;
-                if (buttons[selectedIdxNum]) {
-                    buttons[selectedIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
-                }
+                statusEl.innerText = '🎉 Correct! Awesome job!';
             } else {
-                statusElem.innerHTML = '<span class="text-rose-400 font-bold">❌ Incorrect!</span>';
-                if (selectedIdxNum >= 0 && buttons[selectedIdxNum]) {
-                    buttons[selectedIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-rose-950/80 border border-rose-500 rounded-2xl text-rose-200 font-semibold text-sm text-left flex items-center justify-between';
-                }
-                if (buttons[correctIdxNum]) {
-                    buttons[correctIdxNum].className = 'option-btn w-full py-3.5 px-4 bg-emerald-950/80 border border-emerald-500 rounded-2xl text-emerald-200 font-semibold text-sm text-left flex items-center justify-between';
-                }
+                statusEl.innerText = '❌ Incorrect!';
             }
 
-            try {
-                const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
-                const docSnap = await pRef.get();
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    const newScore = (data.score || 0) + pointsEarned;
-                    const newCorrect = (data.correctCount || 0) + (isCorrect ? 1 : 0);
-                    let newlyEliminated = data.eliminated || false;
+            const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
+            const pDoc = await pRef.get();
+            if (pDoc.exists) {
+                const data = pDoc.data();
+                let currentScore = data.score || 0;
+                let currentCorrect = data.correctCount || 0;
+                let eliminated = data.eliminated || false;
 
-                    if (gameMode === 'suddendeath' && !isCorrect) {
-                        newlyEliminated = true;
-                        isEliminated = true;
+                if (isCorrect) {
+                    currentScore += 1000;
+                    currentCorrect += 1;
+                } else if (gameMode === 'suddendeath') {
+                    eliminated = true;
+                    isEliminated = true;
+                }
+
+                await pRef.update({
+                    score: currentScore,
+                    correctCount: currentCorrect,
+                    answer: selectedIndex,
+                    eliminated: eliminated
+                });
+            }
+
+            setTimeout(async () => {
+                if (isHost) {
+                    const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
+                    if (roomDoc.exists && roomDoc.data().status === 'playing') {
+                        await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
                     }
-
-                    await pRef.update({
-                        answer: selectedIdxNum,
-                        score: newScore,
-                        correctCount: newCorrect,
-                        lastResponseTimeMs: responseTimeMs,
-                        eliminated: newlyEliminated
-                    });
                 }
-            } catch (err) {
-                console.error("Error submitting answer:", err);
-            }
+            }, 1200);
         }
 
-        function renderMultiplayerLeaderboard(playersMap) {
-            const players = Object.keys(playersMap).map(id => ({ id, ...playersMap[id] }));
+        async function renderLeaderboard(roomData, isFinished) {
+            const snap = await db.collection('trivia_rooms').doc(currentRoomCode).collection('players').get();
+            let players = [];
+            snap.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
             players.sort((a, b) => b.score - a.score);
 
-            const lbList = document.getElementById('leaderboard-list');
-            lbList.innerHTML = '';
+            const titleEl = document.getElementById('leaderboard-title');
+            const subEl = document.getElementById('leaderboard-subtitle');
+            const iconEl = document.getElementById('leaderboard-icon');
 
-            let myRank = '--';
-            players.forEach((p, idx) => {
-                if (p.id === userId) myRank = idx + 1;
-                if (idx < 5) {
-                    let rankDisplay = `#${idx + 1}`;
-                    if (idx === 0) rankDisplay = '🥇';
-                    else if (idx === 1) rankDisplay = '🥈';
-                    else if (idx === 2) rankDisplay = '🥉';
+            if (isFinished) {
+                iconEl.innerText = '🏆';
+                titleEl.innerText = 'Final Standings!';
+                subEl.innerText = 'The Trivia Monarch has been crowned!';
+            } else {
+                iconEl.innerText = '📊';
+                titleEl.innerText = 'Live Standings';
+                subEl.innerText = `After Question ${(roomData.currentQIndex || 0) + 1} of ${targetQuestionCount}`;
+            }
 
-                    const div = document.createElement('div');
-                    div.className = `p-3 rounded-2xl border flex justify-between items-center text-xs font-semibold ${p.id === userId ? 'bg-indigo-950/50 border-indigo-500' : 'bg-slate-950 border-slate-800'}`;
-                    div.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <span class="font-mono text-indigo-400 w-6 text-center">${rankDisplay}</span>
-                            <span class="text-white">${p.name} ${p.eliminated ? '💀' : ''}</span>
-                        </div>
-                        <span class="font-bold text-emerald-400">${p.score} pts</span>
-                    `;
-                    lbList.appendChild(div);
-                }
-            });
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = players.slice(0, 10).map((p, index) => `
+                <div class="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <span class="font-black text-sm ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-amber-600' : 'text-slate-500'}">#${index + 1}</span>
+                        <span class="font-bold text-white text-sm">${p.name} ${p.id === userId ? '(You)' : ''} ${p.eliminated ? '💀' : ''}</span>
+                    </div>
+                    <span class="font-black text-emerald-400 text-sm">${p.score} pts</span>
+                </div>
+            `).join('');
 
-            document.getElementById('sticky-my-rank').innerText = `#${myRank}`;
-            document.getElementById('sticky-total-players').innerText = players.length;
-            document.getElementById('sticky-my-score').innerText = `${playersMap[userId]?.score || 0} pts`;
+            const nextControls = document.getElementById('next-round-controls');
+            const waitingMsg = document.getElementById('waiting-next-msg');
 
-            db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
-                if (!doc.exists) return;
-                const rData = doc.data();
-                const isFinished = rData.status === 'finished';
-
-                const titleElem = document.getElementById('leaderboard-title');
-                const subElem = document.getElementById('leaderboard-subtitle');
-                const iconElem = document.getElementById('leaderboard-icon');
-
+            if (isHost) {
                 if (isFinished) {
-                    iconElem.innerText = '🏆';
-                    titleElem.innerText = 'Match Complete!';
-                    const winner = players[0];
-                    subElem.innerText = winner ? `Winner: ${winner.name} with ${winner.score} pts!` : 'Well played everyone!';
+                    nextControls.classList.add('hidden');
+                    waitingMsg.classList.add('hidden');
                 } else {
-                    iconElem.innerText = '📊';
-                    titleElem.innerText = 'Live Standings';
-                    subElem.innerText = `Question ${(rData.currentQIndex || 0) + 1} of ${targetQuestionCount}`;
+                    nextControls.classList.remove('hidden');
+                    waitingMsg.classList.add('hidden');
                 }
-
-                if (isHost) {
-                    document.getElementById('next-round-controls').classList.remove('hidden');
-                    document.getElementById('waiting-next-msg').classList.add('hidden');
-                    const nextBtn = document.getElementById('next-btn');
-                    if (isFinished) {
-                        nextBtn.innerText = '🔄 Start New Match';
-                        nextBtn.onclick = () => window.location.reload();
-                    } else {
-                        nextBtn.innerText = 'Next Question ➡️';
-                        nextBtn.onclick = window.nextQuestion;
-                    }
-                } else {
-                    document.getElementById('next-round-controls').classList.add('hidden');
-                    document.getElementById('waiting-next-msg').classList.remove('hidden');
-                    document.getElementById('waiting-next-msg').innerText = isFinished ? 'Match finished by host.' : 'Waiting for host to proceed...';
-                }
-            });
+            } else {
+                nextControls.classList.add('hidden');
+                if (!isFinished) waitingMsg.classList.remove('hidden');
+                else waitingMsg.classList.add('hidden');
+            }
         }
     </script>
 </body>
