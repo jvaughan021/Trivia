@@ -70,6 +70,18 @@
 
         <!-- LOBBY VIEW (STRICTLY MULTIPLAYER) -->
         <section id="view-lobby" class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl animate-pop">
+            
+            <!-- RENTAL CALLOUT BANNER -->
+            <div class="bg-gradient-to-r from-indigo-950/80 to-slate-900 border border-indigo-500/30 rounded-2xl p-4 mb-5 text-left">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-base">💼</span>
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Hosting an Event or Pub Quiz?</h3>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed font-medium">
+                    No £10/month subscriptions or 10-player limits! Rent a room key for a single event for just <span class="text-emerald-400 font-bold">£2.50</span> (up to 20 live players, custom questions & full host controls).
+                </p>
+            </div>
+
             <div class="text-center mb-6">
                 <h2 class="text-xl font-bold text-white">Enter Multiplayer Game</h2>
                 <p class="text-slate-400 text-xs mt-1">Enter your nickname to join an authorized match</p>
@@ -123,6 +135,16 @@
                 <div class="flex items-center gap-2 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs font-semibold text-slate-300">
                     <input type="checkbox" id="host-plays-checkbox" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer" onchange="window.toggleHostParticipation(this.checked)">
                     <label for="host-plays-checkbox" class="cursor-pointer">Participate as a player in this match</label>
+                </div>
+
+                <!-- Custom Questions Input Section -->
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2">
+                    <label class="block text-xs font-bold text-indigo-300 uppercase tracking-wider">Custom Questions (Optional)</label>
+                    <p class="text-[11px] text-slate-400 leading-tight">Leave blank to use OpenTDB API. Format per line: <br><code class="text-indigo-400">Question | Correct Answer | Wrong 1, Wrong 2, Wrong 3</code></p>
+                    <textarea id="custom-questions-input" placeholder="What is 2+2? | 4 | 3, 5, 6&#10;Capital of Scotland? | Edinburgh | Glasgow, London, Dundee" rows="3" class="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 font-mono outline-none transition resize-y"></textarea>
+                    <button onclick="window.applyCustomQuestions()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
+                        💾 Apply Custom Questions
+                    </button>
                 </div>
 
                 <div>
@@ -387,6 +409,56 @@
             return uniqueQuestions.slice(0, amount);
         }
 
+        // Parse Custom Questions Text Area
+        function parseCustomQuestionsText(rawText) {
+            const lines = rawText.split('\n');
+            let parsed = [];
+            lines.forEach(line => {
+                const parts = line.split('|').map(p => p.trim());
+                if (parts.length >= 3) {
+                    const qText = parts[0];
+                    const correctAns = parts[1];
+                    const wrongAns = parts[2].split(',').map(w => w.trim());
+                    
+                    const options = [...wrongAns];
+                    const correctIndex = Math.floor(Math.random() * (options.length + 1));
+                    options.splice(correctIndex, 0, correctAns);
+
+                    parsed.push({
+                        q: qText,
+                        options: options,
+                        correct: Number(correctIndex)
+                    });
+                }
+            });
+            return parsed;
+        }
+
+        async function applyCustomQuestions() {
+            if (!isHost || !currentRoomCode) return;
+            const textVal = document.getElementById('custom-questions-input').value.trim();
+            if (!textVal) {
+                alert("Please type or paste custom questions first!");
+                return;
+            }
+
+            const customQs = parseCustomQuestionsText(textVal);
+            if (customQs.length === 0) {
+                alert("Invalid format! Please use: Question | Correct Answer | Wrong 1, Wrong 2, Wrong 3");
+                return;
+            }
+
+            matchQuestions = customQs;
+            targetQuestionCount = customQs.length;
+
+            await db.collection('trivia_rooms').doc(currentRoomCode).update({
+                questions: matchQuestions,
+                qCount: targetQuestionCount
+            });
+
+            alert(`✅ Successfully loaded ${customQs.length} custom questions for this match!`);
+        }
+
         function switchView(viewId) {
             ['view-lobby', 'view-waiting', 'view-game', 'view-leaderboard'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
@@ -480,7 +552,19 @@
             hostPlays = false;
             isEliminated = false;
 
-            matchQuestions = await fetchMatchQuestions(20, 'medium');
+            // Check if custom questions were provided upon creation
+            const customText = document.getElementById('custom-questions-input')?.value.trim() || '';
+            if (customText) {
+                const customQs = parseCustomQuestionsText(customText);
+                if (customQs.length > 0) {
+                    matchQuestions = customQs;
+                    targetQuestionCount = customQs.length;
+                } else {
+                    matchQuestions = await fetchMatchQuestions(20, 'medium');
+                }
+            } else {
+                matchQuestions = await fetchMatchQuestions(20, 'medium');
+            }
 
             const roomData = {
                 code: code,
@@ -491,7 +575,7 @@
                 status: 'waiting',
                 mode: 'classic',
                 difficulty: 'medium',
-                qCount: 20,
+                qCount: targetQuestionCount,
                 qTimer: 15,
                 currentQIndex: 0,
                 questions: matchQuestions,
