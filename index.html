@@ -560,7 +560,10 @@
                 const pListEl = document.getElementById('players-list');
                 pListEl.innerHTML = players.map(p => `
                     <li class="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold">
-                        <span class="text-white">${p.name} ${p.id === userId ? '(You)' : ''}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-white">${p.name} ${p.id === userId ? '(You)' : ''}</span>
+                            ${p.isHost ? '<span class="text-amber-400 text-xs" title="Room Host">👑 Host</span>' : ''}
+                        </div>
                         <span class="text-emerald-400">${p.score} pts</span>
                     </li>
                 `).join('');
@@ -711,7 +714,6 @@
             const isCorrect = selectedIndex === correctIndex;
             const statusEl = document.getElementById('round-status');
             
-            // Dynamic Scoring: Base 100 pts + up to 900 speed bonus pts
             let pointsEarned = 0;
             if (isCorrect && !timedOut) {
                 const speedRatio = timeLeftMs / maxTimerMs;
