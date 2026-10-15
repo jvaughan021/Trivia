@@ -315,7 +315,7 @@
             classic: "🎯 Classic Mode: Standard scoring. Score points based on accuracy and speed. All players stay in for the whole game.",
             suddendeath: "💀 Sudden Death: Single-strike elimination. One incorrect answer instantly eliminates you from the match.",
             minefield: "💣 Minefield: High risk! Correct answers give normal points, but wrong answers subtract -500 points from your score.",
-            streak: "🔥 Streak Master: Consecutive correct answers build multipliers (up to 3x+). A single wrong answer resets your streak.",
+            streak: "🔥 Streak Master: Consecutive correct answers build score multipliers (capped at 3.0x). A single wrong answer resets your streak.",
             lives: "❤️ Lives Mode: Every player gets their own individual pool of lives (2–20). Wrong answers subtract from your hearts; running out eliminates you."
         };
 
@@ -789,7 +789,8 @@
                 const hearts = displayLives <= 5 ? '❤️'.repeat(displayLives) : `❤️ x${displayLives}`;
                 document.getElementById('round-status').innerText = `Lives Left: ${hearts || '0'}`;
             } else if (gameMode === 'streak') {
-                document.getElementById('round-status').innerText = `Current Streak: 🔥 ${myCurrentStreak} (Multiplier: ${(1 + (myCurrentStreak * 0.5)).toFixed(1)}x)`;
+                const currentMultiplier = Math.min(3.0, 1 + (myCurrentStreak * 0.5));
+                document.getElementById('round-status').innerText = `Current Streak: 🔥 ${myCurrentStreak} (Multiplier: ${currentMultiplier.toFixed(1)}x)`;
             } else {
                 document.getElementById('round-status').innerText = 'Select your answer!';
             }
@@ -860,9 +861,9 @@
                 
                 if (gameMode === 'streak') {
                     currentStreak += 1;
-                    const multiplier = 1 + (currentStreak * 0.5);
+                    const multiplier = Math.min(3.0, 1 + (currentStreak * 0.5)); // Capped at 3.0x
                     pointsEarned = Math.round(basePoints * multiplier);
-                    statusEl.innerText = `🎉 Correct! +${pointsEarned} pts! (Streak 🔥 ${currentStreak})`;
+                    statusEl.innerText = `🎉 Correct! +${pointsEarned} pts! (Streak 🔥 ${currentStreak} • ${multiplier.toFixed(1)}x)`;
                 } else {
                     pointsEarned = basePoints;
                     statusEl.innerText = `🎉 Correct! +${pointsEarned} pts!`;
@@ -947,7 +948,8 @@
                 if (gameMode === 'lives') {
                     extraTag = p.eliminated ? '<span class="text-xs text-rose-500 font-bold">💀 Out</span>' : `<span class="text-xs text-rose-400 font-bold">${p.lives !== undefined ? p.lives : startingLives} ❤️</span>`;
                 } else if (gameMode === 'streak' && p.streak > 1) {
-                    extraTag = `<span class="text-xs text-amber-400 font-bold">🔥 ${p.streak}</span>`;
+                    const displayMult = Math.min(3.0, 1 + (p.streak * 0.5)).toFixed(1);
+                    extraTag = `<span class="text-xs text-amber-400 font-bold">🔥 ${p.streak} (${displayMult}x)</span>`;
                 } else if (p.eliminated) {
                     extraTag = '<span class="text-xs text-rose-500 font-bold">💀 Out</span>';
                 }
