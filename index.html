@@ -316,7 +316,7 @@
             suddendeath: "💀 Sudden Death: Single-strike elimination. One incorrect answer instantly eliminates you from the match.",
             minefield: "💣 Minefield: High risk! Correct answers give normal points, but wrong answers subtract -500 points from your score.",
             streak: "🔥 Streak Master: Consecutive correct answers build multipliers (up to 3x+). A single wrong answer resets your streak.",
-            lives: "❤️ Lives Mode: Players start with a shared heart pool. Wrong answers lose a life; running out of hearts eliminates you."
+            lives: "❤️ Lives Mode: Every player gets their own individual pool of lives (2–20). Wrong answers subtract from your hearts; running out eliminates you."
         };
 
         // Parse Custom Questions Text Area
@@ -551,7 +551,6 @@
                     document.getElementById('guest-waiting-msg').classList.add('hidden');
                     document.getElementById('guest-mode-info').classList.add('hidden');
                     
-                    // Update host view mode description box
                     const descBox = document.getElementById('mode-description-box');
                     if (descBox) descBox.innerHTML = modeDescriptions[gameMode] || '';
 
