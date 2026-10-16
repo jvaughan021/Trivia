@@ -605,6 +605,7 @@
                 }
             });
 
+            // Listen directly to player collection snapshots in real-time
             unsubscribePlayers = db.collection('trivia_rooms').doc(code).collection('players').onSnapshot(snapshot => {
                 let players = [];
                 livePlayersCache = {};
@@ -616,6 +617,7 @@
 
                 players.sort((a, b) => b.score - a.score);
 
+                // Update lobby count & player list in real-time
                 document.getElementById('player-count').innerText = players.length;
                 const pListEl = document.getElementById('players-list');
                 pListEl.innerHTML = players.map(p => `
@@ -639,7 +641,7 @@
                     myCurrentLives = myPlayer.lives !== undefined ? myPlayer.lives : startingLives;
                 }
 
-                // Check if all active (non-eliminated) players have answered this round
+                // Auto-advance to leaderboard if all active players answered
                 checkAllPlayersAnswered(players);
             });
         }
@@ -832,11 +834,11 @@
             const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
             if (!roomDoc.exists || roomDoc.data().status !== 'playing') return;
 
-            // Filter out players who are eliminated or host-not-playing
+            // Filter out players who are eliminated
             const activePlayers = players.filter(p => !p.eliminated);
             if (activePlayers.length === 0) return;
 
-            // Check if every active player has submitted an answer (answer !== null)
+            // Check if every active player has submitted an answer
             const allDone = activePlayers.every(p => p.answer !== null && p.answer !== undefined);
 
             if (allDone) {
