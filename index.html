@@ -638,6 +638,9 @@
                     myCurrentStreak = myPlayer.streak || 0;
                     myCurrentLives = myPlayer.lives !== undefined ? myPlayer.lives : startingLives;
                 }
+
+                // Check if all active (non-eliminated) players have answered this round
+                checkAllPlayersAnswered(players);
             });
         }
 
@@ -811,7 +814,7 @@
                         submitAnswer(-1, qObj.correct, true);
                     }
                     
-                    // Only transition room state when timer runs out
+                    // Move to leaderboard when timer runs out
                     if (isHost) {
                         setTimeout(async () => {
                             const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
@@ -822,6 +825,29 @@
                     }
                 }
             }, 100);
+        }
+
+        async function checkAllPlayersAnswered(players) {
+            if (!isHost || !currentRoomCode) return;
+            const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
+            if (!roomDoc.exists || roomDoc.data().status !== 'playing') return;
+
+            // Filter out players who are eliminated or host-not-playing
+            const activePlayers = players.filter(p => !p.eliminated);
+            if (activePlayers.length === 0) return;
+
+            // Check if every active player has submitted an answer (answer !== null)
+            const allDone = activePlayers.every(p => p.answer !== null && p.answer !== undefined);
+
+            if (allDone) {
+                if (timerInterval) clearInterval(timerInterval);
+                setTimeout(async () => {
+                    const checkDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
+                    if (checkDoc.exists && checkDoc.data().status === 'playing') {
+                        await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
+                    }
+                }, 400);
+            }
         }
 
         async function submitAnswer(selectedIndex, correctIndex, timedOut = false) {
