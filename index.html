@@ -807,8 +807,18 @@
 
                 if (left <= 0) {
                     clearInterval(timerInterval);
-                    if (isHost && !hasAnswered && !isEliminated && (!isHost || hostPlays)) {
+                    if (!hasAnswered && !isEliminated) {
                         submitAnswer(-1, qObj.correct, true);
+                    }
+                    
+                    // Only transition room state when timer runs out
+                    if (isHost) {
+                        setTimeout(async () => {
+                            const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
+                            if (roomDoc.exists && roomDoc.data().status === 'playing') {
+                                await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
+                            }
+                        }, 500);
                     }
                 }
             }, 100);
@@ -821,8 +831,6 @@
             const timeTakenMs = Date.now() - questionStartTimeMs;
             const maxTimerMs = targetQuestionTimer * 1000;
             const timeLeftMs = Math.max(0, maxTimerMs - timeTakenMs);
-
-            if (timerInterval) clearInterval(timerInterval);
 
             const buttons = document.querySelectorAll('#options-container button');
             buttons.forEach((btn, idx) => {
@@ -909,15 +917,6 @@
                 answer: selectedIndex,
                 eliminated: eliminated
             });
-
-            setTimeout(async () => {
-                if (isHost) {
-                    const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
-                    if (roomDoc.exists && roomDoc.data().status === 'playing') {
-                        await db.collection('trivia_rooms').doc(currentRoomCode).update({ status: 'leaderboard' });
-                    }
-                }
-            }, 1200);
         }
 
         async function renderLeaderboard(roomData, isFinished) {
