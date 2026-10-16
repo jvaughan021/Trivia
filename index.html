@@ -319,6 +319,25 @@
             lives: "❤️ Lives Mode: Every player gets their own individual pool of lives (2–20). Wrong answers subtract from your hearts; running out eliminates you."
         };
 
+        // Smart disconnect: Delete from lobby if waiting, or mark as disconnected if match is live
+        window.addEventListener('beforeunload', () => {
+            if (currentRoomCode && userId) {
+                try {
+                    db.collection('trivia_rooms').doc(currentRoomCode).get().then(doc => {
+                        if (doc.exists) {
+                            const status = doc.data().status;
+                            const pRef = db.collection('trivia_rooms').doc(currentRoomCode).collection('players').doc(userId);
+                            if (status === 'waiting') {
+                                pRef.delete();
+                            } else {
+                                pRef.update({ disconnected: true });
+                            }
+                        }
+                    });
+                } catch (e) {}
+            }
+        });
+
         // Parse Custom Questions Text Area
         function parseCustomQuestionsText(rawText) {
             const lines = rawText.split('\n');
@@ -517,6 +536,7 @@
                 streak: 0,
                 lives: startingLives,
                 eliminated: false,
+                disconnected: false,
                 isHost: false,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -625,6 +645,7 @@
                         <div class="flex items-center gap-1.5">
                             <span class="text-white">${p.name} ${p.id === userId ? '(You)' : ''}</span>
                             ${p.isHost ? '<span class="text-amber-400 text-xs" title="Room Host">👑 Host</span>' : ''}
+                            ${p.disconnected ? '<span class="text-slate-500 text-[10px]" title="Disconnected">🔌 Left</span>' : ''}
                         </div>
                         <span class="text-emerald-400">${p.score} pts</span>
                     </li>
@@ -662,6 +683,7 @@
                     streak: 0,
                     lives: startingLives,
                     eliminated: false,
+                    disconnected: false,
                     isHost: true,
                     joinedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -754,7 +776,8 @@
                     answer: null,
                     streak: 0,
                     lives: startingLives,
-                    eliminated: false
+                    eliminated: false,
+                    disconnected: false
                 });
             });
             await batch.commit();
@@ -834,8 +857,8 @@
             const roomDoc = await db.collection('trivia_rooms').doc(currentRoomCode).get();
             if (!roomDoc.exists || roomDoc.data().status !== 'playing') return;
 
-            // Filter out players who are eliminated
-            const activePlayers = players.filter(p => !p.eliminated);
+            // Filter out players who are eliminated or disconnected
+            const activePlayers = players.filter(p => !p.eliminated && !p.disconnected);
             if (activePlayers.length === 0) return;
 
             // Check if every active player has submitted an answer
@@ -972,7 +995,9 @@
                 const rankDisplay = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
                 
                 let extraTag = '';
-                if (gameMode === 'lives') {
+                if (p.disconnected) {
+                    extraTag = '<span class="text-xs text-slate-500 font-bold">🔌 Left</span>';
+                } else if (gameMode === 'lives') {
                     extraTag = p.eliminated ? '<span class="text-xs text-rose-500 font-bold">💀 Out</span>' : `<span class="text-xs text-rose-400 font-bold">${p.lives !== undefined ? p.lives : startingLives} ❤️</span>`;
                 } else if (gameMode === 'streak' && p.streak > 1) {
                     const displayMult = Math.min(3.0, 1 + (p.streak * 0.5)).toFixed(1);
